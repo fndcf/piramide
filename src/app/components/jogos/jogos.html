@@ -1,0 +1,133 @@
+<div class="jogos-container">
+  <div class="header-section">
+    <h2>🎾 Jogos e Desafios</h2>
+    <p class="description">Em desenvolvimento - Aqui você poderá agendar jogos e registrar resultados</p>
+  </div>
+  
+  <div class="content-layout">
+    <div class="main-features">
+      <div class="placeholder-card primary-card">
+        <div class="card-header">
+          <h3>⚡ Funcionalidades Principais</h3>
+          <div class="status-badge">Coming Soon</div>
+        </div>
+        
+        <div class="features-grid">
+          <div class="feature-card" (click)="agendarDesafio()">
+            <div class="feature-icon primary">📅</div>
+            <h4>Agendar Desafios</h4>
+            <p>Sistema completo de agendamento com notificações</p>
+            <div class="progress-bar">
+              <div class="progress" style="width: 15%"></div>
+            </div>
+          </div>
+          
+          <div class="feature-card" (click)="registrarResultado()">
+            <div class="feature-icon success">🏆</div>
+            <h4>Registrar Resultados</h4>
+            <p>Interface rápida para inserir placar e atualizar ranking</p>
+            <div class="progress-bar">
+              <div class="progress" style="width: 25%"></div>
+            </div>
+          </div>
+          
+          <div class="feature-card" (click)="verHistoricoCompleto()">
+            <div class="feature-icon info">📊</div>
+            <h4>Histórico Completo</h4>
+            <p>Timeline detalhada de todas as partidas realizadas</p>
+            <div class="progress-bar">
+              <div class="progress" style="width: 10%"></div>
+            </div>
+          </div>
+          
+          <div class="feature-card" (click)="verificarDesafiosPendentes()">
+            <div class="feature-icon warning">⏰</div>
+            <h4>Desafios Pendentes</h4>
+            <p>Monitor de jogos agendados e prazos de conclusão</p>
+            <div class="progress-bar">
+              <div class="progress" style="width: 5%"></div>
+            </div>
+          </div>
+          
+          <div class="feature-card" (click)="validarRegrasDesafio()">
+            <div class="feature-icon secondary">✅</div>
+            <h4>Validação de Regras</h4>
+            <p>Sistema automático de verificação de desafios válidos</p>
+            <div class="progress-bar">
+              <div class="progress" style="width: 30%"></div>
+            </div>
+          </div>
+          
+          <div class="feature-card" (click)="criarTorneio()">
+            <div class="feature-icon special">🏅</div>
+            <h4>Criar Torneios</h4>
+            <p>Organização de competições especiais e eventos</p>
+            <div class="progress-bar">
+              <div class="progress" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="sidebar-info">
+      <div class="info-card stats-card">
+        <h4>📈 Estatísticas Futuras</h4>
+        <div class="stat-item">
+          <span class="stat-label">Jogos Realizados</span>
+          <span class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Desafios Ativos</span>
+          <span class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Torneios</span>
+          <span class="stat-value">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Taxa de Conclusão</span>
+          <span class="stat-value">0%</span>
+        </div>
+      </div>
+      
+      <div class="info-card roadmap-card">
+        <h4>🗺️ Roadmap</h4>
+        <div class="roadmap-list">
+          <div class="roadmap-item completed">
+            <div class="roadmap-icon">✅</div>
+            <span>Sistema de Pirâmide</span>
+          </div>
+          <div class="roadmap-item in-progress">
+            <div class="roadmap-icon">⚡</div>
+            <span>Agendamento de Jogos</span>
+          </div>
+          <div class="roadmap-item pending">
+            <div class="roadmap-icon">⏳</div>
+            <span>Registro de Resultados</span>
+          </div>
+          <div class="roadmap-item pending">
+            <div class="roadmap-icon">🔮</div>
+            <span>Sistema de Torneios</span>
+          </div>
+          <div class="roadmap-item pending">
+            <div class="roadmap-icon">📱</div>
+            <span>App Mobile</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="info-card tech-card">
+        <h4>🔧 Recursos Técnicos</h4>
+        <ul>
+          <li>Real-time updates</li>
+          <li>Push notifications</li>
+          <li>Integração com calendário</li>
+          <li>Sistema de ranking automático</li>
+          <li>Analytics avançados</li>
+          <li>API REST completa</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

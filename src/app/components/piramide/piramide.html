@@ -1,0 +1,283 @@
+<div class="piramide-container">
+  <div class="header">
+    <h2>🏆 Pirâmide Beach Tennis</h2>
+    <p class="subtitle">Sistema de classificação por desafios</p>
+    
+    <!-- Controles de Acesso -->
+    <div class="access-controls">
+      <!-- Se não estiver logado -->
+      <div *ngIf="!authService.isLoggedIn()" class="login-section">
+        <div class="login-buttons">
+          <button class="btn-login-admin" (click)="mostrarModalLogin = true">
+            👑 Login Administrador
+          </button>
+          <button class="btn-login-jogador" (click)="mostrarModalJogador = true">
+            🏐 Login Jogador  
+          </button>
+        </div>
+        <p class="access-info">Escolha seu tipo de acesso à pirâmide</p>
+      </div>
+      
+      <!-- Se estiver logado -->
+      <div *ngIf="authService.isLoggedIn()" class="user-section">
+        <div class="user-info">
+          <span class="user-email">{{ getUserEmail() }}</span>
+          <span *ngIf="isAdmin()" class="admin-badge">👑 ADMIN</span>
+          <span *ngIf="isJogador()" class="jogador-badge">🏐 JOGADOR</span>
+          <button (click)="logout()" class="btn-logout">Sair</button>
+        </div>
+        
+        <!-- Informações da dupla (apenas jogadores) -->
+        <div *ngIf="isJogador() && jogadorInfo" class="jogador-info">
+          <h4>📊 Sua Dupla</h4>
+          <p><strong>Jogadores:</strong> {{ jogadorInfo.dupla.jogador1 }} / {{ jogadorInfo.dupla.jogador2 }}</p>
+          <p><strong>Posição na Pirâmide:</strong> {{ getPosicaoNaPiramide(jogadorInfo.dupla) }}º lugar</p>
+          <p><strong>Estatísticas:</strong> {{ jogadorInfo.dupla.vitorias }} vitórias - {{ jogadorInfo.dupla.derrotas }} derrotas</p>
+          
+          <div class="desafios-info">
+            <h5>🎯 Regras de Desafio</h5>
+            <p><strong>Você pode desafiar:</strong> {{ getQuantidadeDesafiosDisponiveis() }} dupla(s)</p>
+            <p><small>• <strong>Mesma base ({{ jogadorInfo.dupla.base }}):</strong> duplas à sua esquerda</small></p>
+            <p><small>• <strong>Base acima ({{ jogadorInfo.dupla.base - 1 }}):</strong> duplas à sua direita</small></p>
+            <p><small>Sua dupla está em <span class="cor-dourada">dourado</span>, desafios disponíveis em <span class="cor-verde">verde</span></small></p>
+            
+            <div class="regras-avancadas">
+              <h6>⚔️ Sistema de Risco/Recompensa</h6>
+              <p><small>• <strong>Vitória:</strong> Assume a posição do adversário</small></p>
+              <p><small>• <strong>Derrota:</strong> Cai posições = diferença entre vocês</small></p>
+              <p><small>• <strong>Exemplo:</strong> 7º vs 5º → Perde = cai para 9º (7-5=2)</small></p>
+              <p><small>• <strong>Limite:</strong> Nunca cai além do último lugar da pirâmide</small></p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Controles de Admin -->
+        <div class="admin-controls" *ngIf="isAdmin()">
+          <button class="btn-admin" (click)="mostrarModalAdicionar = true">
+            ➕ Adicionar Dupla
+          </button>
+          <button class="btn-admin btn-refresh" (click)="carregarDuplas()">
+            🔄 Atualizar
+          </button>
+          <button class="btn-admin btn-config" (click)="mostrarModalConfig = true">
+            ⚙️ Configurações
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="piramide" *ngIf="!carregando">
+    <div *ngFor="let base of basesReais; let i = index" 
+         class="nivel" 
+         [attr.data-nivel]="i + 1">
+      
+      <div class="duplas-linha">
+        <!-- Duplas existentes -->
+        <div *ngFor="let dupla of base; let j = index" 
+             class="dupla-card preenchida"
+             [class.selected]="dupla.selected"
+             [class.minha-dupla]="isMinhaDupla(dupla)"
+             [class.pode-desafiar]="podeSerDesafiada(dupla)"
+             [class.desafio-disponivel]="isJogador() && podeDesafiar(dupla)"
+             (click)="selecionarDupla(dupla)"
+             [title]="getTituloCard(dupla)">
+          <div class="jogadores">{{ dupla.jogador1 }} / {{ dupla.jogador2 }}</div>
+          <div class="stats">{{ dupla.vitorias }}V-{{ dupla.derrotas }}D</div>
+          <div class="posicao-geral">{{ getPosicaoNaPiramide(dupla) }}º</div>
+          
+          <!-- Indicador de "Minha Dupla" -->
+          <div *ngIf="isMinhaDupla(dupla)" class="badge-minha">MEU</div>
+          
+          <!-- Indicador de desafio disponível -->
+          <div *ngIf="isJogador() && podeDesafiar(dupla)" class="badge-desafio">!</div>
+          
+          <!-- Botão de gerenciar (apenas admin) -->
+          <button *ngIf="isAdmin()" 
+                  class="btn-gerenciar" 
+                  (click)="gerenciarDupla($event, dupla)"
+                  title="Gerenciar dupla">
+            ⚙️
+          </button>
+          
+          <!-- Botão de remover (apenas admin) -->
+          <button *ngIf="isAdmin()" 
+                  class="btn-remover" 
+                  (click)="removerDupla($event, dupla)"
+                  title="Remover dupla">
+            ×
+          </button>
+        </div>
+        
+        <!-- Slots vazios -->
+        <div *ngFor="let slot of getSlots(i + 1, base.length)" 
+             class="dupla-card vazia"
+             (click)="isAdmin() ? (mostrarModalAdicionar = true) : null"
+             [class.clickable]="isAdmin()">
+          <div class="jogadores">{{ isAdmin() ? '+ Adicionar' : 'Vaga' }}</div>
+          <div class="stats">{{ isAdmin() ? 'Dupla' : 'Disponível' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Loading -->
+  <div class="loading" *ngIf="carregando">
+    <div class="spinner"></div>
+    <p>Carregando pirâmide...</p>
+  </div>
+  
+  <!-- Controles de seleção -->
+  <div class="controles" *ngIf="duplasSelecionadas.length > 0">
+    <p>{{ duplasSelecionadas.length }} dupla(s) selecionada(s)</p>
+    <button (click)="criarDesafio()" 
+            [disabled]="duplasSelecionadas.length !== 2"
+            class="btn-desafio">
+      {{ duplasSelecionadas.length === 2 ? 'Criar Desafio' : 'Selecione 2 duplas' }}
+    </button>
+    <button (click)="limparSelecao()" class="btn-limpar">Limpar</button>
+  </div>
+  
+  <div class="info-cards">
+    <div class="info-card">
+      <h4>📊 Estatísticas</h4>
+      <p>Total de duplas: {{ getTotalDuplas() }}</p>
+      <p>Vagas disponíveis: {{ getTotalVagas() }}</p>
+      <p>Status: {{ getStatusUsuario() }}</p>
+    </div>
+    
+    <div class="info-card">
+      <h4>🎯 Regras de Desafio Avançadas</h4>
+      <p>• <strong>Mesma base:</strong> Pode desafiar duplas à sua esquerda</p>
+      <p>• <strong>Base acima:</strong> Pode desafiar duplas à sua direita</p>
+      <p>• <strong>🏆 Vitória:</strong> Assume a posição do adversário</p>
+      <p>• <strong>💥 Derrota:</strong> Cai X posições (X = diferença entre vocês)</p>
+      <p>• <strong>🛡️ Proteção:</strong> Nunca cai além do último lugar da pirâmide</p>
+      <p>• <strong>⚡ Movimentação:</strong> Demais duplas ajustam automaticamente</p>
+      <p *ngIf="isAdmin()">• Como admin, você pode adicionar/remover duplas</p>
+      <p *ngIf="!authService.isLoggedIn()">• Faça login para participar dos desafios</p>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Resultado do Desafio -->
+<div class="modal-overlay" *ngIf="mostrarModalResultado" (click)="fecharModalResultado()">
+  <div class="modal-content resultado-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>⚔️ Registrar Resultado do Desafio</h3>
+      <button class="btn-close" (click)="fecharModalResultado()">×</button>
+    </div>
+    
+    <div class="modal-body" *ngIf="desafioAtual">
+      <div class="desafio-info">
+        <h4>🥊 Confronto</h4>
+        <div class="confronto">
+          <div class="dupla desafiante">
+            <div class="dupla-nome">{{ desafioAtual.desafiante.jogador1 }} / {{ desafioAtual.desafiante.jogador2 }}</div>
+            <div class="dupla-posicao">{{ desafioAtual.posicaoDesafiante }}º lugar</div>
+            <div class="dupla-role">DESAFIANTE</div>
+          </div>
+          
+          <div class="vs-separator">
+            <span>VS</span>
+          </div>
+          
+          <div class="dupla desafiado">
+            <div class="dupla-nome">{{ desafioAtual.desafiado.jogador1 }} / {{ desafioAtual.desafiado.jogador2 }}</div>
+            <div class="dupla-posicao">{{ desafioAtual.posicaoDesafiado }}º lugar</div>
+            <div class="dupla-role">DESAFIADO</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="cenarios-resultado">
+        <h4>📈 Cenários Possíveis</h4>
+        
+        <div class="cenario vitoria">
+          <div class="cenario-header">
+            <h5>🏆 Se {{ desafioAtual.desafiante.jogador1 }}/{{ desafioAtual.desafiante.jogador2 }} VENCER</h5>
+          </div>
+          <div class="cenario-detalhes">
+            <p>• <strong>Assume a {{ desafioAtual.posicaoDesafiado }}ª posição</strong></p>
+            <p>• {{ desafioAtual.desafiado.jogador1 }}/{{ desafioAtual.desafiado.jogador2 }} desce para {{ desafioAtual.posicaoDesafiado + 1 }}ª</p>
+            <p>• Duplas entre as posições {{ desafioAtual.posicaoDesafiado }} e {{ desafioAtual.posicaoDesafiante }} descem 1 posição</p>
+          </div>
+        </div>
+        
+        <div class="cenario derrota">
+          <div class="cenario-header">
+            <h5>💥 Se {{ desafioAtual.desafiante.jogador1 }}/{{ desafioAtual.desafiante.jogador2 }} PERDER</h5>
+          </div>
+          <div class="cenario-detalhes">
+            <ng-container *ngIf="(desafioAtual.posicaoDesafiante + desafioAtual.diferenciaPosicoes) <= getTotalDuplas(); else limitePiramide">
+              <p>• <strong>Cai para a {{ desafioAtual.posicaoDesafiante + desafioAtual.diferenciaPosicoes }}ª posição</strong></p>
+              <p>• Penalidade: {{ desafioAtual.diferenciaPosicoes }} posições (diferença do desafio)</p>
+            </ng-container>
+            <ng-template #limitePiramide>
+              <p>• <strong>Cai para o último lugar ({{ getTotalDuplas() }}ª posição)</strong></p>
+              <p>• ⚠️ Penalidade limitada pelo tamanho da pirâmide</p>
+              <p>• Penalidade original seria: {{ desafioAtual.diferenciaPosicoes }} posições</p>
+              <p>• Aplicada: {{ getTotalDuplas() - desafioAtual.posicaoDesafiante }} posições</p>
+            </ng-template>
+            <p>• Duplas entre as posições afetadas sobem 1 posição</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="resultado-buttons">
+        <h4>🏁 Qual foi o resultado?</h4>
+        <div class="buttons-grid">
+          <button class="btn-vitoria" (click)="aplicarResultadoDesafio(true)">
+            🏆 {{ desafioAtual.desafiante.jogador1 }}/{{ desafioAtual.desafiante.jogador2 }} VENCEU
+          </button>
+          <button class="btn-derrota" (click)="aplicarResultadoDesafio(false)">
+            💥 {{ desafioAtual.desafiado.jogador1 }}/{{ desafioAtual.desafiado.jogador2 }} VENCEU
+          </button>
+        </div>
+      </div>
+      
+      <div class="aviso-importante">
+        <h5>⚠️ Importante</h5>
+        <p>Esta ação <strong>não pode ser desfeita</strong>. As posições na pirâmide serão atualizadas automaticamente conforme as regras estabelecidas.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Login Administrador -->
+<app-login-modal 
+  [mostrar]="mostrarModalLogin"
+  (fechar)="mostrarModalLogin = false"
+  (loginSucesso)="onLoginSucesso()">
+</app-login-modal>
+
+<!-- Modal de Login Jogador -->
+<app-login-jogador-modal 
+  [mostrar]="mostrarModalJogador"
+  (fechar)="mostrarModalJogador = false"
+  (jogadorLogado)="onJogadorLogado($event)">
+</app-login-jogador-modal>
+
+<!-- Modal de Configuração -->
+<app-configuracao-modal 
+  [mostrar]="mostrarModalConfig"
+  (fechar)="mostrarModalConfig = false"
+  (configuracaoAtualizada)="onConfiguracaoAtualizada()">
+</app-configuracao-modal>
+
+<!-- Modal para gerenciar dupla -->
+<app-modal-gerenciar-dupla
+  [mostrar]="mostrarModalGerenciar"
+  [dupla]="duplaGerenciada"
+  [todasDuplas]="obterTodasDuplas()"
+  [getPosicaoNaPiramide]="getPosicaoNaPiramide.bind(this)"
+  (fechar)="fecharModalGerenciar()"
+  (duplaAtualizada)="onDuplaGerenciada()">
+</app-modal-gerenciar-dupla>
+
+<!-- Modal para adicionar dupla -->
+<app-adicionar-dupla 
+  [mostrar]="mostrarModalAdicionar"
+  (fechar)="mostrarModalAdicionar = false"
+  (duplaAdicionada)="onDuplaAdicionada()">
+</app-adicionar-dupla>

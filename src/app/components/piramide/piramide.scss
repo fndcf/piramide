@@ -1,0 +1,995 @@
+// Estilos existentes da pirâmide
+.piramide-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  color: white;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+h2 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+}
+
+.access-controls {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.login-section {
+  text-align: center;
+}
+
+.login-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.btn-login-admin, .btn-login-jogador {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1rem;
+  min-width: 180px;
+}
+
+.btn-login-admin {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  }
+}
+
+.btn-login-jogador {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(78, 205, 196, 0.4);
+  }
+}
+
+.access-info {
+  margin-top: 0.5rem;
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+.user-section {
+  text-align: center;
+  width: 100%;
+}
+
+.user-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 1rem 2rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.user-email {
+  font-weight: 500;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.admin-badge, .jogador-badge {
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.admin-badge {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #333;
+}
+
+.jogador-badge {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+  color: white;
+}
+
+.btn-logout {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 500;
+
+  &:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+  }
+}
+
+.jogador-info {
+  background: rgba(78, 205, 196, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem;
+  border-radius: 15px;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  margin-top: 1rem;
+  text-align: left;
+
+  h4 {
+    margin-bottom: 1rem;
+    color: #4ecdc4;
+    font-size: 1.1rem;
+    text-align: center;
+  }
+
+  p {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    opacity: 0.9;
+  }
+}
+
+.desafios-info {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(78, 205, 196, 0.3);
+
+  h5 {
+    margin-bottom: 0.8rem;
+    color: #4ecdc4;
+    font-size: 1rem;
+  }
+
+  small {
+    font-size: 0.8rem;
+    opacity: 0.8;
+  }
+}
+
+// ✅ NOVO: Estilos para regras avançadas
+.regras-avancadas {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(255, 193, 7, 0.1);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+
+  h6 {
+    margin: 0 0 0.5rem 0;
+    color: #ffc107;
+    font-size: 0.9rem;
+  }
+
+  p small {
+    font-size: 0.75rem;
+    opacity: 0.9;
+  }
+}
+
+.cor-dourada {
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.cor-verde {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.admin-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-admin {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.9rem;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+  }
+}
+
+.btn-refresh {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+
+  &:hover {
+    box-shadow: 0 8px 25px rgba(78, 205, 196, 0.3);
+  }
+}
+
+.btn-config {
+  background: linear-gradient(135deg, #6f42c1 0%, #5a2d91 100%);
+
+  &:hover {
+    box-shadow: 0 8px 25px rgba(111, 66, 193, 0.3);
+  }
+}
+
+.piramide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 3rem;
+  perspective: 1000px;
+}
+
+.nivel {
+  display: flex;
+  justify-content: center;
+  animation: slideInDown 0.8s ease-out;
+  animation-delay: calc(var(--nivel, 1) * 0.1s);
+  animation-fill-mode: both;
+
+  &[data-nivel="1"] { --nivel: 1; }
+  &[data-nivel="2"] { --nivel: 2; }
+  &[data-nivel="3"] { --nivel: 3; }
+  &[data-nivel="4"] { --nivel: 4; }
+  &[data-nivel="5"] { --nivel: 5; }
+  &[data-nivel="6"] { --nivel: 6; }
+  &[data-nivel="7"] { --nivel: 7; }
+  &[data-nivel="8"] { --nivel: 8; }
+  &[data-nivel="9"] { --nivel: 9; }
+}
+
+.duplas-linha {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.dupla-card {
+  background: rgba(255, 255, 255, 0.95);
+  border: 3px solid transparent;
+  border-radius: 15px;
+  padding: 15px 12px;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 130px;
+  max-width: 130px;
+  backdrop-filter: blur(15px);
+  color: #333;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: left 0.5s;
+  }
+
+  &:hover::before {
+    left: 100%;
+  }
+
+  &:hover {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+    border-color: #667eea;
+  }
+
+  &.preenchida {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: rgba(255,255,255,0.3);
+
+    &:hover {
+      border-color: #ffd700;
+      box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+
+      .btn-remover {
+        display: flex;
+      }
+    }
+  }
+
+  &.minha-dupla {
+    border: 3px solid #ffd700 !important;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8) !important;
+    animation: pulseGold 2s infinite;
+  }
+
+  &.desafio-disponivel {
+    border: 3px solid #28a745 !important;
+    cursor: pointer;
+    animation: pulseGreen 3s infinite;
+
+    &:hover {
+      border-color: #20c997 !important;
+      box-shadow: 0 15px 35px rgba(40, 167, 69, 0.5) !important;
+      transform: translateY(-10px) scale(1.08) !important;
+    }
+  }
+
+  &.selected {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 20px rgba(220, 53, 69, 0.8) !important;
+    transform: translateY(-8px) scale(1.1) !important;
+  }
+
+  &.vazia {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.8);
+    cursor: default;
+
+    &.clickable {
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: white;
+        color: white;
+      }
+    }
+  }
+}
+
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+  50% { box-shadow: 0 0 30px rgba(255, 215, 0, 1); }
+}
+
+@keyframes pulseGreen {
+  0%, 100% { border-color: #28a745; }
+  50% { border-color: #20c997; }
+}
+
+.badge-minha, .badge-desafio {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  z-index: 10;
+}
+
+.badge-minha {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #333;
+  border: 2px solid white;
+}
+
+.badge-desafio {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: 2px solid white;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.btn-remover {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+
+  &:hover {
+    background: #c82333;
+    transform: scale(1.1);
+  }
+}
+
+.jogadores {
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.stats {
+  font-size: 0.8rem;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.loading {
+  text-align: center;
+  padding: 3rem;
+}
+
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top: 4px solid white;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.controles {
+  text-align: center;
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  p {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+}
+
+.btn-desafio, .btn-limpar {
+  padding: 12px 24px;
+  margin: 0 10px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 1rem;
+}
+
+.btn-desafio {
+  background: #28a745;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: #218838;
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.btn-limpar {
+  background: #dc3545;
+  color: white;
+
+  &:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+  }
+}
+
+.info-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.info-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+
+  h4 {
+    margin-bottom: 1rem;
+    color: #fff;
+    font-size: 1.3rem;
+  }
+
+  p {
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+    line-height: 1.6;
+  }
+}
+
+// ✅ NOVOS ESTILOS: Modal de Resultado do Desafio
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+  backdrop-filter: blur(10px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content.resultado-modal {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 25px;
+  max-width: 700px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+  animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-header {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 25px 25px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+
+  h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+  }
+}
+
+.modal-body {
+  padding: 2.5rem;
+  color: white;
+}
+
+.desafio-info {
+  margin-bottom: 2.5rem;
+
+  h4 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.3rem;
+    text-align: center;
+    color: #ffd700;
+  }
+}
+
+.confronto {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 2rem;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.dupla {
+  text-align: center;
+  padding: 1.5rem;
+  border-radius: 15px;
+  position: relative;
+
+  &.desafiante {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(238, 90, 82, 0.2) 100%);
+    border: 2px solid rgba(255, 107, 107, 0.5);
+  }
+
+  &.desafiado {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+    border: 2px solid rgba(102, 126, 234, 0.5);
+  }
+
+  .dupla-nome {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: white;
+  }
+
+  .dupla-posicao {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #ffd700;
+    margin-bottom: 0.5rem;
+  }
+
+  .dupla-role {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+.vs-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: white;
+  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.cenarios-resultado {
+  margin-bottom: 2.5rem;
+
+  h4 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.3rem;
+    text-align: center;
+    color: #4ecdc4;
+  }
+}
+
+.cenario {
+  margin-bottom: 1.5rem;
+  border-radius: 15px;
+  overflow: hidden;
+  border: 2px solid transparent;
+
+  &.vitoria {
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(56, 161, 105, 0.1) 100%);
+    border-color: rgba(40, 167, 69, 0.5);
+  }
+
+  &.derrota {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(200, 35, 51, 0.1) 100%);
+    border-color: rgba(220, 53, 69, 0.5);
+  }
+
+  .cenario-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    h5 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+  }
+
+  .cenario-detalhes {
+    padding: 1.5rem;
+
+    p {
+      margin: 0.5rem 0;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      opacity: 0.9;
+
+      strong {
+        color: #ffd700;
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+.resultado-buttons {
+  margin-bottom: 2rem;
+
+  h4 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.3rem;
+    text-align: center;
+    color: #ff9500;
+  }
+}
+
+.buttons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.btn-vitoria, .btn-derrota {
+  padding: 1.5rem 2rem;
+  border: none;
+  border-radius: 15px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+
+  &:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+  }
+
+  &:active {
+    transform: translateY(-2px) scale(0.98);
+  }
+}
+
+.btn-vitoria {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+
+  &:hover {
+    box-shadow: 0 15px 40px rgba(72, 187, 120, 0.4);
+  }
+}
+
+.btn-derrota {
+  background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+  color: white;
+
+  &:hover {
+    box-shadow: 0 15px 40px rgba(245, 101, 101, 0.4);
+  }
+}
+
+.aviso-importante {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%);
+  border: 2px solid rgba(255, 193, 7, 0.5);
+  border-radius: 15px;
+  padding: 1.5rem;
+
+  h5 {
+    margin: 0 0 1rem 0;
+    color: #ffc107;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    opacity: 0.9;
+
+    strong {
+      color: #ff9500;
+      font-weight: 700;
+    }
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-50px) rotateX(90deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotateX(0deg);
+  }
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .dupla-card {
+    min-width: 110px;
+    max-width: 110px;
+    padding: 12px 8px;
+  }
+  
+  .duplas-linha {
+    gap: 8px;
+  }
+  
+  .jogadores {
+    font-size: 0.8rem;
+  }
+  
+  .stats {
+    font-size: 0.7rem;
+  }
+  
+  .info-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .admin-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .user-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .login-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  // Modal responsivo
+  .modal-content.resultado-modal {
+    width: 98%;
+    margin: 1rem;
+  }
+
+  .confronto {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    text-align: center;
+
+    .vs-separator {
+      width: 60px;
+      height: 60px;
+      font-size: 1.2rem;
+      margin: 0 auto;
+    }
+  }
+
+  .buttons-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .btn-vitoria, .btn-derrota {
+    padding: 1.2rem 1.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dupla-card {
+    min-width: 90px;
+    max-width: 90px;
+  }
+  
+  .duplas-linha {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  .modal-header {
+    padding: 1.5rem;
+
+    h3 {
+      font-size: 1.2rem;
+    }
+  }
+
+  .dupla {
+    padding: 1rem;
+
+    .dupla-nome {
+      font-size: 0.9rem;
+    }
+
+    .dupla-posicao {
+      font-size: 1.5rem;
+    }
+
+    .dupla-role {
+      font-size: 0.7rem;
+    }
+  }
+
+  .cenario-detalhes p {
+    font-size: 0.8rem;
+  }
+
+  .resultado-buttons h4,
+  .cenarios-resultado h4,
+  .desafio-info h4 {
+    font-size: 1.1rem;
+  }
+}

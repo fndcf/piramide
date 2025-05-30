@@ -1,0 +1,45 @@
+<div class="register-container">
+  <div class="register-card">
+    <h2>📝 Cadastro</h2>
+    <p>Em desenvolvimento - Criação de conta Firebase</p>
+    
+    <div class="form-preview">
+      <div class="input-group">
+        <label>Nome:</label>
+        <input type="text" placeholder="Seu nome completo" disabled>
+      </div>
+      
+      <div class="input-group">
+        <label>Email:</label>
+        <input type="email" placeholder="seu@email.com" disabled>
+      </div>
+      
+      <div class="input-group">
+        <label>Senha:</label>
+        <input type="password" placeholder="••••••••" disabled>
+      </div>
+      
+      <div class="input-group">
+        <label>Confirmar Senha:</label>
+        <input type="password" placeholder="••••••••" disabled>
+      </div>
+      
+      <button class="btn-register" disabled>Criar Conta</button>
+      
+      <p class="login-link">
+        Já tem conta? <span (click)="goToLogin()">Faça login aqui</span>
+      </p>
+    </div>
+    
+    <div class="development-notice">
+      <h3>🚧 Em Desenvolvimento</h3>
+      <ul>
+        <li>✅ Integração com Firebase Auth</li>
+        <li>✅ Validação de formulário</li>
+        <li>✅ Confirmação de email</li>
+        <li>✅ Recuperação de senha</li>
+        <li>✅ Perfis de usuário</li>
+      </ul>
+    </div>
+  </div>
+</div>

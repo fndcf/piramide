@@ -1,0 +1,133 @@
+<div class="modal-overlay" *ngIf="mostrar" (click)="fecharModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>⚙️ Configurações de Desafio</h3>
+      <button class="btn-close" (click)="fecharModal()">×</button>
+    </div>
+    
+    <div class="modal-body">
+      <p class="subtitle">Configure ATÉ qual posição os jogadores podem desafiar livremente até o topo</p>
+      
+      <div class="current-issue-alert">
+        <h4>✅ Lógica Corrigida</h4>
+        <p><strong>Nova interpretação:</strong> "ATÉ o 5º colocado" significa que 2º, 3º, 4º e 5º podem desafiar até o 1º</p>
+        <p><strong>Resultado:</strong> 6º, 7º, 8º... seguem apenas a regra original</p>
+        <p><strong>Exemplo:</strong> Se configurar "ATÉ o 3º", apenas 2º e 3º podem desafiar livremente</p>
+      </div>
+      
+      <form (ngSubmit)="onSalvar()" #configForm="ngForm">
+        <div class="form-group">
+          <label>Posição Limite para Desafio Livre (ATÉ):</label>
+          <select [(ngModel)]="posicaoLimite" 
+                  name="posicaoLimite"
+                  class="form-control"
+                  [disabled]="loading">
+            <option value="1">Nenhum (apenas regra original)</option>
+            <option value="2">ATÉ o 2º colocado</option>
+            <option value="3">ATÉ o 3º colocado</option>
+            <option value="4">ATÉ o 4º colocado</option>
+            <option value="5">ATÉ o 5º colocado</option>
+            <option value="6">ATÉ o 6º colocado</option>
+            <option value="7">ATÉ o 7º colocado</option>
+            <option value="8">ATÉ o 8º colocado</option>
+            <option value="10">ATÉ o 10º colocado</option>
+          </select>
+          <small class="help-text">
+            Jogadores do 2º ATÉ a posição escolhida podem desafiar até o 1º lugar
+          </small>
+        </div>
+        
+        <div class="preview-section">
+          <h4>📋 Simulação com a Configuração Escolhida</h4>
+          <div class="example-card">
+            <div *ngIf="getExemplosConfiguracao().temExcecao">
+              <div class="exemplo-posicao can-challenge">
+                <strong>Posições que PODEM desafiar livremente:</strong>
+                <p class="positions-list">
+                  <span *ngFor="let pos of getExemplosConfiguracao().posicaoComExcecao; let isLast = last">
+                    {{ pos }}º{{ !isLast ? ', ' : '' }}
+                  </span>
+                </p>
+                <ul>
+                  <li>✅ <strong>Regra original:</strong> Mesma base (à esquerda) + base acima (à direita)</li>
+                  <li>✅ <strong>EXCEÇÃO ESPECIAL:</strong> Podem desafiar qualquer posição até o 1º lugar</li>
+                </ul>
+              </div>
+              
+              <div class="exemplo-posicao cannot-challenge">
+                <strong>Posições que NÃO podem desafiar livremente:</strong>
+                <p class="positions-list">
+                  <span *ngFor="let pos of getExemplosConfiguracao().posicaoSemExcecao; let isLast = last">
+                    {{ pos }}º{{ !isLast ? ', ' : '' }}
+                  </span>
+                  <span> e todas as seguintes...</span>
+                </p>
+                <ul>
+                  <li>✅ <strong>Apenas regra original:</strong> Mesma base (à esquerda) + base acima (à direita)</li>
+                  <li>❌ <strong>Não podem:</strong> Desafiar livremente até o topo</li>
+                </ul>
+              </div>
+              
+              <div class="regra-explicacao">
+                <p><strong>🎯 Resumo da Configuração:</strong></p>
+                <p>• <strong>1º lugar:</strong> Não precisa desafiar ninguém</p>
+                <p>• <strong>2º ao {{ posicaoLimite }}º:</strong> Podem desafiar até o 1º lugar</p>
+                <p>• <strong>{{ posicaoLimite + 1 }}º em diante:</strong> Apenas regra original</p>
+              </div>
+            </div>
+            
+            <div *ngIf="!getExemplosConfiguracao().temExcecao">
+              <div class="exemplo-posicao original-only">
+                <p><strong>🎯 Apenas Regra Original Aplicada:</strong></p>
+                <ul>
+                  <li>✅ <strong>Mesma base:</strong> Duplas à esquerda</li>
+                  <li>✅ <strong>Base acima:</strong> Duplas à direita</li>
+                  <li>❌ <strong>Nenhuma exceção:</strong> Ninguém pode desafiar livremente até o topo</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="recommendation-box">
+          <h4>💡 Exemplos Práticos</h4>
+          <div class="examples-grid">
+            <div class="example-item">
+              <strong>ATÉ o 3º:</strong> Apenas 2º e 3º podem ir ao 1º
+              <small>Mais restritivo</small>
+            </div>
+            <div class="example-item">
+              <strong>ATÉ o 5º:</strong> 2º, 3º, 4º e 5º podem ir ao 1º
+              <small>Equilibrado</small>
+            </div>
+            <div class="example-item">
+              <strong>ATÉ o 7º:</strong> 2º ao 7º podem ir ao 1º
+              <small>Mais permissivo</small>
+            </div>
+          </div>
+        </div>
+        
+        <div class="alert-message" *ngIf="mensagem" [class]="tipoMensagem">
+          {{ mensagem }}
+        </div>
+        
+        <div class="form-actions">
+          <button 
+            type="button" 
+            class="btn-cancelar" 
+            (click)="fecharModal()"
+            [disabled]="loading">
+            Cancelar
+          </button>
+          <button 
+            type="submit" 
+            class="btn-salvar" 
+            [disabled]="loading">
+            <span *ngIf="loading">Salvando...</span>
+            <span *ngIf="!loading">Salvar Configuração</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

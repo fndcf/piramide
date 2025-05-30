@@ -1,0 +1,48 @@
+<div class="login-container">
+  <div class="login-card">
+    <h2>🔐 Login Administrador</h2>
+    <p>Acesso restrito para gerenciar a pirâmide</p>
+    
+    <form (ngSubmit)="onLogin()" #loginForm="ngForm">
+      <div class="input-group">
+        <label>Email:</label>
+        <input 
+          type="email" 
+          [(ngModel)]="email" 
+          name="email"
+          placeholder="admin@piramide.com" 
+          required
+          [disabled]="loading">
+      </div>
+      
+      <div class="input-group">
+        <label>Senha:</label>
+        <input 
+          type="password" 
+          [(ngModel)]="password" 
+          name="password"
+          placeholder="••••••••" 
+          required
+          [disabled]="loading">
+      </div>
+      
+      <div class="error-message" *ngIf="errorMessage">
+        {{ errorMessage }}
+      </div>
+      
+      <button 
+        type="submit" 
+        class="btn-login" 
+        [disabled]="loading || !loginForm.form.valid">
+        <span *ngIf="loading">Entrando...</span>
+        <span *ngIf="!loading">Entrar</span>
+      </button>
+    </form>
+    
+    <div class="info-box">
+      <h4>ℹ️ Informações</h4>
+      <p><strong>Administrador:</strong> Pode adicionar/remover duplas</p>
+      <p><strong>Visitante:</strong> Pode apenas visualizar a pirâmide</p>
+    </div>
+  </div>
+</div>

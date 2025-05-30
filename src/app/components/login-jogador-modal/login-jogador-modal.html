@@ -1,0 +1,63 @@
+<div class="modal-overlay" *ngIf="mostrar" (click)="fecharModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>🏐 Acesso para Jogadores</h3>
+      <button class="btn-close" (click)="fecharModal()">×</button>
+    </div>
+    
+    <div class="modal-body">
+      <p class="subtitle">Digite seu telefone para acessar suas informações</p>
+      
+      <form (ngSubmit)="onLogin()" #loginForm="ngForm">
+        <div class="form-group">
+          <label>Telefone:</label>
+          <input 
+            type="tel" 
+            [(ngModel)]="telefone" 
+            name="telefone"
+            placeholder="(11) 99999-0000"
+            required
+            [disabled]="loading"
+            class="form-control"
+            (input)="formatarTelefone($event)">
+          <small class="help-text">Digite o telefone cadastrado na sua dupla</small>
+        </div>
+        
+        <div class="error-message" *ngIf="errorMessage">
+          {{ errorMessage }}
+        </div>
+        
+        <div class="success-message" *ngIf="duplaEncontrada">
+          <h4>✅ Dupla encontrada!</h4>
+          <p><strong>Jogadores:</strong> {{ duplaEncontrada.jogador1 }} / {{ duplaEncontrada.jogador2 }}</p>
+          <p><strong>Estatísticas:</strong> {{ duplaEncontrada.vitorias }} vitórias - {{ duplaEncontrada.derrotas }} derrotas</p>
+          <p><strong>Status:</strong> Acesso liberado! Você será redirecionado...</p>
+        </div>
+        
+        <div class="form-actions">
+          <button 
+            type="button" 
+            class="btn-cancelar" 
+            (click)="fecharModal()"
+            [disabled]="loading">
+            Cancelar
+          </button>
+          <button 
+            type="submit" 
+            class="btn-login" 
+            [disabled]="loading || !loginForm.form.valid">
+            <span *ngIf="loading">Verificando...</span>
+            <span *ngIf="!loading">Acessar</span>
+          </button>
+        </div>
+      </form>
+      
+      <div class="info-box">
+        <h4>ℹ️ Acesso de Jogador</h4>
+        <p><strong>🔍 Consulta:</strong> Veja sua posição na pirâmide</p>
+        <p><strong>📊 Estatísticas:</strong> Acompanhe vitórias e derrotas</p>
+        <p><strong>📱 Telefone:</strong> Use o número cadastrado pelo administrador</p>
+      </div>
+    </div>
+  </div>
+</div>
