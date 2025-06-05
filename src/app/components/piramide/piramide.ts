@@ -7,7 +7,6 @@ import { AdicionarDuplaComponent } from '../adicionar-dupla/adicionar-dupla';
 import { LoginModalComponent } from '../login-modal/login-modal';
 import { LoginJogadorModalComponent } from '../login-jogador-modal/login-jogador-modal';
 import { ConfiguracaoModalComponent } from '../configuracao-modal/configuracao-modal';
-import { ModalGerenciarDuplaComponent } from '../modal-gerenciar-dupla/modal-gerenciar-dupla';
 import { Dupla } from '../../models/dupla.model';
 
 interface DesafioInfo {
@@ -26,7 +25,7 @@ interface ResultadoMovimentacao {
 @Component({
   selector: 'app-piramide',
   standalone: true,
-  imports: [CommonModule, AdicionarDuplaComponent, LoginModalComponent, LoginJogadorModalComponent, ConfiguracaoModalComponent, ModalGerenciarDuplaComponent],
+  imports: [CommonModule, AdicionarDuplaComponent, LoginModalComponent, LoginJogadorModalComponent, ConfiguracaoModalComponent],
   templateUrl: './piramide.html',
   styleUrls: ['./piramide.scss']
 })
@@ -44,10 +43,6 @@ export class PiramideComponent implements OnInit {
   // Modal para registrar resultado
   mostrarModalResultado = false;
   desafioAtual: DesafioInfo | null = null;
-  
-  // ✅ NOVO: Modal para gerenciar dupla
-  mostrarModalGerenciar = false;
-  duplaGerenciada: Dupla | null = null;
 
   constructor(
     public authService: AuthService,
@@ -106,11 +101,52 @@ export class PiramideComponent implements OnInit {
   }
 
   selecionarDupla(dupla: Dupla) {
+    // ✅ NOVA REGRA: Apenas administradores podem selecionar duplas para criar desafios
+    if (!this.isAdmin()) {
+      return; // Bloqueia a seleção para não-administradores
+    }
+
+    // ✅ VALIDAÇÃO: Se já temos uma dupla selecionada, validar se a segunda seleção é válida
+    if (this.duplasSelecionadas.length === 1 && !dupla.selected) {
+      const primeiraDupla = this.duplasSelecionadas[0];
+      
+      // Determinar quem seria o desafiante
+      const pos1 = this.getPosicaoNaPiramide(primeiraDupla);
+      const pos2 = this.getPosicaoNaPiramide(dupla);
+      
+      let desafiante: Dupla, desafiado: Dupla;
+      
+      if (pos1 > pos2) {
+        desafiante = primeiraDupla;
+        desafiado = dupla;
+      } else {
+        desafiante = dupla;
+        desafiado = primeiraDupla;
+      }
+      
+      // Validar se o desafio seria válido
+      const validacao = this.validarDesafio(desafiante, desafiado);
+      
+      if (!validacao.valido) {
+        alert(`❌ Seleção Inválida!\n\n${validacao.motivo}\n\n${validacao.explicacao}`);
+        return; // Não permite a seleção
+      }
+    }
+
+    // Lógica original de seleção
     if (dupla.selected) {
       dupla.selected = false;
       this.duplasSelecionadas = this.duplasSelecionadas.filter(d => d.id !== dupla.id);
     } else {
       if (this.duplasSelecionadas.length < 2) {
+        dupla.selected = true;
+        this.duplasSelecionadas.push(dupla);
+      } else {
+        // Se já tem 2 selecionadas, substituir a primeira pela nova
+        const primeiraSelecionada = this.duplasSelecionadas[0];
+        primeiraSelecionada.selected = false;
+        
+        this.duplasSelecionadas = [this.duplasSelecionadas[1]];
         dupla.selected = true;
         this.duplasSelecionadas.push(dupla);
       }
@@ -133,13 +169,6 @@ export class PiramideComponent implements OnInit {
     }
   }
 
-  // ✅ NOVA FUNCIONALIDADE: Gerenciar dupla
-  gerenciarDupla(event: Event, dupla: Dupla) {
-    event.stopPropagation();
-    this.duplaGerenciada = dupla;
-    this.mostrarModalGerenciar = true;
-  }
-
   getPosicaoNaPiramide(duplaBuscada: any): number {
     let posicao = 1;
     
@@ -160,7 +189,7 @@ export class PiramideComponent implements OnInit {
     return posicao;
   }
 
-  // ✅ NOVA FUNCIONALIDADE: Criar desafio com regras avançadas
+  // ✅ FUNCIONALIDADE: Criar desafio com regras avançadas e validação
   criarDesafio() {
     if (this.duplasSelecionadas.length === 2) {
       const dupla1 = this.duplasSelecionadas[0];
@@ -187,14 +216,13 @@ export class PiramideComponent implements OnInit {
         posDesafiado = pos1;
       }
 
-      // Verificar se o desafio é válido
-      if (this.isJogador()) {
-        const minhaDupla = this.jogadorInfo.dupla;
-        if (!this.podeDesafiar(desafiado) && minhaDupla.id === desafiante.id) {
-          alert('Desafio inválido! Você só pode desafiar duplas dentro das regras permitidas.');
-          this.limparSelecao();
-          return;
-        }
+      // ✅ VALIDAÇÃO COMPLETA: Verificar se o desafio é válido conforme as regras
+      const validacao = this.validarDesafio(desafiante, desafiado);
+      
+      if (!validacao.valido) {
+        alert(`❌ Desafio Inválido!\n\n${validacao.motivo}\n\n${validacao.explicacao}`);
+        this.limparSelecao();
+        return;
       }
 
       const diferenca = posDesafiante - posDesafiado;
@@ -211,6 +239,100 @@ export class PiramideComponent implements OnInit {
       this.mostrarModalResultado = true;
       this.limparSelecao();
     }
+  }
+
+  // ✅ NOVA FUNCIONALIDADE: Validação completa das regras de desafio
+  validarDesafio(desafiante: Dupla, desafiado: Dupla): { valido: boolean, motivo: string, explicacao: string } {
+    const posDesafiante = this.getPosicaoNaPiramide(desafiante);
+    const posDesafiado = this.getPosicaoNaPiramide(desafiado);
+    
+    // ❌ Regra 1: Não pode desafiar a si mesmo
+    if (desafiante.id === desafiado.id) {
+      return {
+        valido: false,
+        motivo: "Uma dupla não pode desafiar a si mesma",
+        explicacao: "Selecione duas duplas diferentes para criar um desafio."
+      };
+    }
+    
+    // ❌ Regra 2: Só pode desafiar posições melhores (números menores)
+    if (posDesafiado >= posDesafiante) {
+      return {
+        valido: false,
+        motivo: "Só é possível desafiar duplas em posições superiores",
+        explicacao: `${desafiante.jogador1}/${desafiante.jogador2} (${posDesafiante}º) não pode desafiar ${desafiado.jogador1}/${desafiado.jogador2} (${posDesafiado}º).`
+      };
+    }
+
+    const baseDesafiante = desafiante.base;
+    const posicaoDesafiante = desafiante.posicao;
+    const baseDesafiado = desafiado.base;
+    const posicaoDesafiado = desafiado.posicao;
+
+    // ✅ Regra 3: Mesma base - pode desafiar todos à esquerda (posições menores)
+    if (baseDesafiado === baseDesafiante) {
+      if (posicaoDesafiado < posicaoDesafiante) {
+        return {
+          valido: true,
+          motivo: "Desafio válido na mesma base",
+          explicacao: `${desafiante.jogador1}/${desafiante.jogador2} pode desafiar duplas à sua esquerda na mesma base.`
+        };
+      } else {
+        return {
+          valido: false,
+          motivo: "Na mesma base, só pode desafiar duplas à esquerda",
+          explicacao: `${desafiante.jogador1}/${desafiante.jogador2} (base ${baseDesafiante}, pos ${posicaoDesafiante}) só pode desafiar duplas nas posições 1 a ${posicaoDesafiante - 1} da base ${baseDesafiante}.`
+        };
+      }
+    }
+    
+    // ✅ Regra 4: Base imediatamente acima - pode desafiar todos à direita
+    if (baseDesafiado === baseDesafiante - 1) {
+      const podeDesafiarNaBase = posicaoDesafiado >= posicaoDesafiante && posicaoDesafiado <= baseDesafiado;
+      if (podeDesafiarNaBase) {
+        return {
+          valido: true,
+          motivo: "Desafio válido na base acima",
+          explicacao: `${desafiante.jogador1}/${desafiante.jogador2} pode desafiar duplas à sua direita na base ${baseDesafiado}.`
+        };
+      } else {
+        return {
+          valido: false,
+          motivo: "Na base acima, só pode desafiar duplas à direita ou alinhadas",
+          explicacao: `${desafiante.jogador1}/${desafiante.jogador2} (pos ${posicaoDesafiante}) só pode desafiar posições ${posicaoDesafiante} a ${baseDesafiado} da base ${baseDesafiado}.`
+        };
+      }
+    }
+    
+    // ✅ Regra 5: Exceção para posições ATÉ o limite configurado
+    if (this.posicaoLimiteDesafioTopo > 1 && posDesafiante <= this.posicaoLimiteDesafioTopo) {
+      if (baseDesafiado < baseDesafiante) {
+        return {
+          valido: true,
+          motivo: "Desafio válido por posição privilegiada",
+          explicacao: `${desafiante.jogador1}/${desafiante.jogador2} (${posDesafiante}º lugar) tem privilégio especial e pode desafiar até o topo da pirâmide.`
+        };
+      }
+    }
+    
+    // ❌ Todas as outras situações são inválidas
+    let explicacaoDetalhada = `${desafiante.jogador1}/${desafiante.jogador2} (base ${baseDesafiante}, ${posDesafiante}º geral) não pode desafiar ${desafiado.jogador1}/${desafiado.jogador2} (base ${baseDesafiado}, ${posDesafiado}º geral).\n\n`;
+    
+    explicacaoDetalhada += "📋 Regras permitidas:\n";
+    explicacaoDetalhada += `• Mesma base (${baseDesafiante}): posições 1 a ${posicaoDesafiante - 1}\n`;
+    explicacaoDetalhada += `• Base acima (${baseDesafiante - 1}): posições ${posicaoDesafiante} a ${baseDesafiante - 1}\n`;
+    
+    if (this.posicaoLimiteDesafioTopo > 1 && posDesafiante <= this.posicaoLimiteDesafioTopo) {
+      explicacaoDetalhada += `• Posição privilegiada: pode desafiar qualquer dupla até o topo\n`;
+    } else if (this.posicaoLimiteDesafioTopo > 1) {
+      explicacaoDetalhada += `• Para ter privilégio especial, precisa estar entre o 2º e ${this.posicaoLimiteDesafioTopo}º lugar\n`;
+    }
+
+    return {
+      valido: false,
+      motivo: "Desafio não permitido pelas regras da pirâmide",
+      explicacao: explicacaoDetalhada
+    };
   }
 
   // ✅ REGRAS DE MOVIMENTAÇÃO: Vitória do desafiante
@@ -302,17 +424,35 @@ export class PiramideComponent implements OnInit {
 
     if (confirmar) {
       try {
-        // Aqui você faria a chamada para o service atualizar as posições
-        // await this.duplasService.atualizarPosicoes(movimentacao.novasPosicoes);
+        console.log('🎯 Aplicando resultado do desafio...');
         
-        console.log('Movimentação aplicada:', movimentacao);
-        alert('Resultado registrado com sucesso! A pirâmide foi atualizada.');
+        // 1. Atualizar posições das duplas
+        const resultadoPosicoes = await this.duplasService.atualizarPosicoes(movimentacao.novasPosicoes);
         
-        // Recarregar a pirâmide
+        if (!resultadoPosicoes.success) {
+          alert(`Erro ao atualizar posições: ${resultadoPosicoes.message}`);
+          return;
+        }
+
+        // 2. Registrar estatísticas do jogo
+        const vencedorId = desafianteVenceu ? this.desafioAtual.desafiante.id : this.desafioAtual.desafiado.id;
+        const perdedorId = desafianteVenceu ? this.desafioAtual.desafiado.id : this.desafioAtual.desafiante.id;
+        
+        const resultadoEstatisticas = await this.duplasService.registrarResultadoJogo(vencedorId, perdedorId);
+        
+        if (!resultadoEstatisticas.success) {
+          console.warn('Aviso ao atualizar estatísticas:', resultadoEstatisticas.message);
+        }
+
+        // 3. Mostrar mensagem de sucesso
+        const vencedor = desafianteVenceu ? this.desafioAtual.desafiante : this.desafioAtual.desafiado;
+        alert(`🏆 Resultado registrado com sucesso!\n\n${vencedor.jogador1}/${vencedor.jogador2} venceu o desafio!\nA pirâmide foi atualizada automaticamente.`);
+        
+        // 4. Recarregar a pirâmide para mostrar as mudanças
         await this.carregarDuplas();
         
       } catch (error) {
-        console.error('Erro ao aplicar resultado:', error);
+        console.error('❌ Erro ao aplicar resultado:', error);
         alert('Erro ao registrar o resultado. Tente novamente.');
       }
     }
@@ -321,47 +461,6 @@ export class PiramideComponent implements OnInit {
     this.desafioAtual = null;
   }
 
-  // ✅ FUNÇÃO AUXILIAR: Calcular nova posição respeitando limites
-  calcularNovaPosicaoComLimite(posicaoAtual: number, penalidade: number): {
-    novaPosicao: number;
-    limitada: boolean;
-    penalityAplicada: number;
-  } {
-    const totalDuplas = this.getTotalDuplas();
-    const novaPosicaoCalculada = posicaoAtual + penalidade;
-    const novaPosicao = Math.min(novaPosicaoCalculada, totalDuplas);
-    const limitada = novaPosicaoCalculada > totalDuplas;
-    const penalityAplicada = novaPosicao - posicaoAtual;
-    
-    return {
-      novaPosicao,
-      limitada,
-      penalityAplicada
-    };
-  }
-
-  // ✅ FUNÇÃO DE TESTE: Para demonstrar o exemplo do usuário
-  exemploCalculo() {
-    // Exemplo: 13 duplas, 11º vs 7º
-    const totalDuplas = 13;
-    const posicaoDesafiante = 11;
-    const posicaoDesafiado = 7;
-    const diferenca = posicaoDesafiante - posicaoDesafiado; // 4
-    
-    const resultado = this.calcularNovaPosicaoComLimite(posicaoDesafiante, diferenca);
-    
-    console.log('=== EXEMPLO DE CÁLCULO ===');
-    console.log(`Pirâmide com: ${totalDuplas} duplas`);
-    console.log(`Desafiante: ${posicaoDesafiante}º lugar`);
-    console.log(`Desafiado: ${posicaoDesafiado}º lugar`);
-    console.log(`Diferença: ${diferenca} posições`);
-    console.log(`Nova posição calculada: ${posicaoDesafiante + diferenca}º`);
-    console.log(`Nova posição aplicada: ${resultado.novaPosicao}º`);
-    console.log(`Limitada pela pirâmide: ${resultado.limitada ? 'SIM' : 'NÃO'}`);
-    console.log(`Penalidade aplicada: ${resultado.penalityAplicada} posições`);
-    
-    return resultado;
-  }
   // ✅ OBTER TODAS AS DUPLAS EM ORDEM DE POSIÇÃO
   obterTodasDuplasOrdenadas(): Dupla[] {
     const duplas: Dupla[] = [];
@@ -459,8 +558,46 @@ export class PiramideComponent implements OnInit {
   }
 
   getTituloCard(dupla: Dupla): string {
+    // ✅ NOVA FUNCIONALIDADE: Tooltips específicos para administradores
+    if (this.isAdmin()) {
+      // ✅ VALIDAÇÃO PARA ADMIN: Mostrar dicas de seleção quando há uma dupla já selecionada
+      if (this.duplasSelecionadas.length === 1 && !dupla.selected) {
+        const primeiraDupla = this.duplasSelecionadas[0];
+        const pos1 = this.getPosicaoNaPiramide(primeiraDupla);
+        const pos2 = this.getPosicaoNaPiramide(dupla);
+        
+        let desafiante: Dupla, desafiado: Dupla;
+        
+        if (pos1 > pos2) {
+          desafiante = primeiraDupla;
+          desafiado = dupla;
+        } else {
+          desafiante = dupla;
+          desafiado = primeiraDupla;
+        }
+        
+        const validacao = this.validarDesafio(desafiante, desafiado);
+        
+        if (validacao.valido) {
+          return `✅ SELEÇÃO VÁLIDA PARA DESAFIO\n\n${validacao.explicacao}\n\nClique para criar: ${desafiante.jogador1}/${desafiante.jogador2} vs ${desafiado.jogador1}/${desafiado.jogador2}`;
+        } else {
+          return `❌ SELEÇÃO INVÁLIDA PARA DESAFIO\n\n${validacao.motivo}\n\n${validacao.explicacao}`;
+        }
+      }
+
+      // Status de seleção para admin
+      const statusSelecao = this.duplasSelecionadas.length === 0 ? 
+        'Clique para selecionar e criar desafios' : 
+        this.duplasSelecionadas.length === 1 ? 
+          'Clique para fazer o segundo par do desafio' : 
+          'Máximo de 2 duplas selecionadas';
+          
+      return `👑 ADMIN - ${dupla.jogador1}/${dupla.jogador2}\nBase ${dupla.base}, Pos ${dupla.posicao} (${this.getPosicaoNaPiramide(dupla)}º lugar)\n\n${statusSelecao}`;
+    }
+
+    // ✅ TOOLTIPS PARA JOGADORES: Apenas informativos, sem opção de seleção
     if (this.isMinhaDupla(dupla)) {
-      return 'Esta é a sua dupla!';
+      return `🏐 Esta é a sua dupla!\n\nPosição: ${this.getPosicaoNaPiramide(dupla)}º lugar\nBase: ${dupla.base}, Posição: ${dupla.posicao}\nEstatísticas: ${dupla.vitorias}V - ${dupla.derrotas}D\n\n📋 Apenas administradores podem criar desafios`;
     }
     
     if (this.isJogador() && this.podeDesafiar(dupla)) {
@@ -469,7 +606,6 @@ export class PiramideComponent implements OnInit {
       const posicaoAlvo = this.getPosicaoNaPiramide(dupla);
       const diferenca = minhaPosicao - posicaoAlvo;
       
-      // ✅ CORREÇÃO: Calcular penalidade considerando limite da pirâmide
       const totalDuplas = this.getTotalDuplas();
       const penalidade = Math.min(minhaPosicao + diferenca, totalDuplas);
       const penalityLimitada = penalidade < (minhaPosicao + diferenca);
@@ -483,24 +619,28 @@ export class PiramideComponent implements OnInit {
         motivo = 'posição privilegiada, pode desafiar livremente';
       }
       
-      let tooltip = `Você pode desafiar esta dupla (${motivo})\n` +
-                   `🏆 PRÊMIO: Se ganhar, assumirá a ${posicaoAlvo}ª posição\n`;
+      let tooltip = `🎯 DUPLA DESAFIÁVEL (${motivo})\n\n` +
+                   `🏆 SE VENCER: Assumirá a ${posicaoAlvo}ª posição\n`;
       
       if (penalityLimitada) {
-        tooltip += `⚠️ RISCO: Se perder, cairá para o último lugar (${totalDuplas}º)\n` +
-                   `   (penalidade seria ${diferenca} posições, limitada pelo tamanho da pirâmide)`;
+        tooltip += `⚠️ SE PERDER: Cairá para o último lugar (${totalDuplas}º)\n` +
+                   `   (penalidade seria ${diferenca} posições, limitada pelo tamanho da pirâmide)\n\n`;
       } else {
-        tooltip += `⚠️ RISCO: Se perder, cairá ${diferenca} posições para a ${penalidade}ª posição!`;
+        tooltip += `⚠️ SE PERDER: Cairá ${diferenca} posições para a ${penalidade}ª posição!\n\n`;
       }
+      
+      tooltip += `📋 Apenas administradores podem criar desafios`;
       
       return tooltip;
     }
     
-    if (this.isAdmin()) {
-      return `${dupla.jogador1}/${dupla.jogador2} - Base ${dupla.base}, Pos ${dupla.posicao} (${this.getPosicaoNaPiramide(dupla)}º lugar)`;
+    // ✅ TOOLTIPS PARA VISITANTES: Apenas informativos
+    if (!this.authService.isLoggedIn()) {
+      return `${dupla.jogador1}/${dupla.jogador2} - ${this.getPosicaoNaPiramide(dupla)}º lugar\n\nFaça login para ver mais informações`;
     }
     
-    return `${dupla.jogador1}/${dupla.jogador2} - ${this.getPosicaoNaPiramide(dupla)}º lugar`;
+    // ✅ TOOLTIPS PARA JOGADORES EM OUTRAS DUPLAS: Informativos
+    return `${dupla.jogador1}/${dupla.jogador2} - ${this.getPosicaoNaPiramide(dupla)}º lugar\nBase ${dupla.base}, Posição ${dupla.posicao}\nEstatísticas: ${dupla.vitorias}V - ${dupla.derrotas}D`;
   }
 
   getQuantidadeDesafiosDisponiveis(): number {
@@ -521,15 +661,20 @@ export class PiramideComponent implements OnInit {
   async logout() {
     await this.authService.logout();
     this.jogadorInfo = null;
+    // ✅ NOVO: Limpar seleções quando fizer logout
     this.limparSelecao();
   }
 
   onLoginSucesso() {
+    // ✅ NOVO: Limpar seleções quando fizer login
+    this.limparSelecao();
     this.carregarDuplas();
   }
 
   onJogadorLogado(jogadorInfo: any) {
     this.jogadorInfo = jogadorInfo;
+    // ✅ NOVO: Limpar seleções quando jogador fizer login
+    this.limparSelecao();
     this.carregarDuplas();
   }
 
@@ -546,20 +691,27 @@ export class PiramideComponent implements OnInit {
     this.desafioAtual = null;
   }
 
-  // ✅ NOVO: Fechar modal de gerenciamento
-  fecharModalGerenciar() {
-    this.mostrarModalGerenciar = false;
-    this.duplaGerenciada = null;
+  // ✅ NOVAS FUNCIONALIDADES AUXILIARES: Para o preview do desafio
+  getDuplaDesafiante(): Dupla {
+    if (this.duplasSelecionadas.length !== 2) return this.duplasSelecionadas[0];
+    
+    const pos1 = this.getPosicaoNaPiramide(this.duplasSelecionadas[0]);
+    const pos2 = this.getPosicaoNaPiramide(this.duplasSelecionadas[1]);
+    
+    // Desafiante é quem está em posição pior (número maior)
+    return pos1 > pos2 ? this.duplasSelecionadas[0] : this.duplasSelecionadas[1];
   }
 
-  // ✅ NOVO: Callback quando dupla é atualizada
-  onDuplaGerenciada() {
-    this.carregarDuplas();
-    this.fecharModalGerenciar();
+  getDuplaDesafiado(): Dupla {
+    if (this.duplasSelecionadas.length !== 2) return this.duplasSelecionadas[0];
+    
+    const pos1 = this.getPosicaoNaPiramide(this.duplasSelecionadas[0]);
+    const pos2 = this.getPosicaoNaPiramide(this.duplasSelecionadas[1]);
+    
+    // Desafiado é quem está em posição melhor (número menor)
+    return pos1 > pos2 ? this.duplasSelecionadas[1] : this.duplasSelecionadas[0];
   }
 
-  // ✅ NOVO: Obter todas as duplas (para o modal de gerenciamento)
-  obterTodasDuplas(): Dupla[] {
-    return this.obterTodasDuplasOrdenadas();
-  }
+  // ✅ Expor Math para o template
+  Math = Math;
 }

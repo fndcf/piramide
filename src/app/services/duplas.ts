@@ -103,6 +103,86 @@ export class DuplasService {
 
   constructor() {}
 
+  // ✅ NOVA FUNCIONALIDADE: Atualizar posições das duplas após desafio
+  async atualizarPosicoes(movimentacoes: { dupla: Dupla; novaPos: number }[]): Promise<{ success: boolean, message: string }> {
+    try {
+      await this.delay(500); // Simular delay da API
+
+      console.log('🔄 Iniciando atualização de posições:', movimentacoes);
+
+      // Criar um mapa de todas as duplas por ID para facilitar busca
+      const mapaDuplas = new Map<string, Dupla>();
+      this.duplas.forEach(dupla => {
+        if (dupla.ativa) {
+          mapaDuplas.set(dupla.id, dupla);
+        }
+      });
+
+      // Aplicar as movimentações
+      for (const movimentacao of movimentacoes) {
+        const dupla = mapaDuplas.get(movimentacao.dupla.id);
+        if (dupla) {
+          // Calcular nova base e posição baseado na posição geral
+          const novaBase = this.calcularBasePorPosicao(movimentacao.novaPos);
+          const novaPosicaoNaBase = this.calcularPosicaoNaBasePorPosicao(movimentacao.novaPos);
+          
+          console.log(`📍 ${dupla.jogador1}/${dupla.jogador2}: ${dupla.base}.${dupla.posicao} → ${novaBase}.${novaPosicaoNaBase} (${movimentacao.novaPos}º geral)`);
+          
+          dupla.base = novaBase;
+          dupla.posicao = novaPosicaoNaBase;
+        }
+      }
+
+      console.log('✅ Posições atualizadas com sucesso!');
+
+      return {
+        success: true,
+        message: 'Posições atualizadas com sucesso!'
+      };
+    } catch (error) {
+      console.error('❌ Erro ao atualizar posições:', error);
+      return {
+        success: false,
+        message: 'Erro ao atualizar posições. Tente novamente.'
+      };
+    }
+  }
+
+  // ✅ NOVA FUNCIONALIDADE: Registrar resultado do jogo e atualizar estatísticas
+  async registrarResultadoJogo(vencedorId: string, perdedorId: string): Promise<{ success: boolean, message: string }> {
+    try {
+      await this.delay(300);
+
+      const vencedor = this.duplas.find(d => d.id === vencedorId);
+      const perdedor = this.duplas.find(d => d.id === perdedorId);
+
+      if (vencedor && perdedor) {
+        // Atualizar estatísticas
+        vencedor.vitorias = (vencedor.vitorias || 0) + 1;
+        perdedor.derrotas = (perdedor.derrotas || 0) + 1;
+
+        console.log(`📈 Estatísticas atualizadas:`);
+        console.log(`🏆 ${vencedor.jogador1}/${vencedor.jogador2}: ${vencedor.vitorias}V-${vencedor.derrotas}D`);
+        console.log(`💥 ${perdedor.jogador1}/${perdedor.jogador2}: ${perdedor.vitorias}V-${perdedor.derrotas}D`);
+
+        return {
+          success: true,
+          message: 'Resultado registrado e estatísticas atualizadas!'
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Duplas não encontradas para atualizar estatísticas'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Erro ao registrar resultado'
+      };
+    }
+  }
+
   async criarDupla(novaDupla: NovaDupla): Promise<{ success: boolean, message: string }> {
     try {
       await this.delay(500); // Simular delay da API

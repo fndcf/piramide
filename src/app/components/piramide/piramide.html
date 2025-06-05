@@ -78,8 +78,9 @@
              class="dupla-card preenchida"
              [class.selected]="dupla.selected"
              [class.minha-dupla]="isMinhaDupla(dupla)"
-             [class.pode-desafiar]="podeSerDesafiada(dupla)"
+             [class.pode-desafiar]="isJogador() && podeDesafiar(dupla)"
              [class.desafio-disponivel]="isJogador() && podeDesafiar(dupla)"
+             [class.admin-selectable]="isAdmin()"
              (click)="selecionarDupla(dupla)"
              [title]="getTituloCard(dupla)">
           <div class="jogadores">{{ dupla.jogador1 }} / {{ dupla.jogador2 }}</div>
@@ -89,16 +90,11 @@
           <!-- Indicador de "Minha Dupla" -->
           <div *ngIf="isMinhaDupla(dupla)" class="badge-minha">MEU</div>
           
-          <!-- Indicador de desafio disponível -->
-          <div *ngIf="isJogador() && podeDesafiar(dupla)" class="badge-desafio">!</div>
+          <!-- Indicador de desafio disponível (apenas visual para jogadores) -->
+          <div *ngIf="isJogador() && podeDesafiar(dupla)" class="badge-desafio-info">?</div>
           
-          <!-- Botão de gerenciar (apenas admin) -->
-          <button *ngIf="isAdmin()" 
-                  class="btn-gerenciar" 
-                  (click)="gerenciarDupla($event, dupla)"
-                  title="Gerenciar dupla">
-            ⚙️
-          </button>
+          <!-- Indicador de seleção para admin -->
+          <div *ngIf="isAdmin() && dupla.selected" class="badge-selecionada">✓</div>
           
           <!-- Botão de remover (apenas admin) -->
           <button *ngIf="isAdmin()" 
@@ -127,15 +123,45 @@
     <p>Carregando pirâmide...</p>
   </div>
   
-  <!-- Controles de seleção -->
-  <div class="controles" *ngIf="duplasSelecionadas.length > 0">
-    <p>{{ duplasSelecionadas.length }} dupla(s) selecionada(s)</p>
-    <button (click)="criarDesafio()" 
-            [disabled]="duplasSelecionadas.length !== 2"
-            class="btn-desafio">
-      {{ duplasSelecionadas.length === 2 ? 'Criar Desafio' : 'Selecione 2 duplas' }}
-    </button>
-    <button (click)="limparSelecao()" class="btn-limpar">Limpar</button>
+  
+  <!-- Controles de seleção - APENAS PARA ADMINISTRADORES -->
+  <div class="controles admin-only" *ngIf="duplasSelecionadas.length > 0 && isAdmin()">
+    <div class="admin-section-header">
+      <h3>👑 Área Administrativa - Criação de Desafios</h3>
+      <p>Como administrador, você pode criar desafios entre qualquer dupla respeitando as regras da pirâmide.</p>
+    </div>
+    
+    <p class="selection-info">{{ duplasSelecionadas.length }} dupla(s) selecionada(s)</p>
+    
+    <!-- ✅ PREVIEW DO DESAFIO: Apenas para admins -->
+    <div *ngIf="duplasSelecionadas.length === 2" class="preview-desafio">
+      <h4>🥊 Preview do Desafio</h4>
+      <div class="duplas-preview">
+        <div class="dupla-preview">
+          <strong>{{ getDuplaDesafiante().jogador1 }}/{{ getDuplaDesafiante().jogador2 }}</strong>
+          <span class="posicao">{{ getPosicaoNaPiramide(getDuplaDesafiante()) }}º lugar</span>
+          <span class="role desafiante">DESAFIANTE</span>
+        </div>
+        <div class="vs">VS</div>
+        <div class="dupla-preview">
+          <strong>{{ getDuplaDesafiado().jogador1 }}/{{ getDuplaDesafiado().jogador2 }}</strong>
+          <span class="posicao">{{ getPosicaoNaPiramide(getDuplaDesafiado()) }}º lugar</span>
+          <span class="role desafiado">DESAFIADO</span>
+        </div>
+      </div>
+      <div class="info-desafio">
+        <p><small>💡 Diferença: {{ Math.abs(getPosicaoNaPiramide(getDuplaDesafiante()) - getPosicaoNaPiramide(getDuplaDesafiado())) }} posições</small></p>
+      </div>
+    </div>
+    
+    <div class="botoes-controle">
+      <button (click)="criarDesafio()" 
+              [disabled]="duplasSelecionadas.length !== 2"
+              class="btn-desafio admin-btn">
+        {{ duplasSelecionadas.length === 2 ? '⚔️ Registrar Resultado do Desafio' : 'Selecione 2 duplas para criar desafio' }}
+      </button>
+      <button (click)="limparSelecao()" class="btn-limpar admin-btn">🗑️ Limpar Seleção</button>
+    </div>
   </div>
   
   <div class="info-cards">
@@ -147,15 +173,16 @@
     </div>
     
     <div class="info-card">
-      <h4>🎯 Regras de Desafio Avançadas</h4>
+      <h4>🎯 Regras de Desafio</h4>
       <p>• <strong>Mesma base:</strong> Pode desafiar duplas à sua esquerda</p>
       <p>• <strong>Base acima:</strong> Pode desafiar duplas à sua direita</p>
       <p>• <strong>🏆 Vitória:</strong> Assume a posição do adversário</p>
       <p>• <strong>💥 Derrota:</strong> Cai X posições (X = diferença entre vocês)</p>
       <p>• <strong>🛡️ Proteção:</strong> Nunca cai além do último lugar da pirâmide</p>
       <p>• <strong>⚡ Movimentação:</strong> Demais duplas ajustam automaticamente</p>
-      <p *ngIf="isAdmin()">• Como admin, você pode adicionar/remover duplas</p>
-      <p *ngIf="!authService.isLoggedIn()">• Faça login para participar dos desafios</p>
+      <p *ngIf="isAdmin()" class="admin-info">• <strong>👑 ADMIN:</strong> Você pode criar desafios entre qualquer dupla válida</p>
+      <p *ngIf="isJogador()" class="jogador-info">• <strong>🏐 JOGADOR:</strong> Você pode ver quais duplas poderia desafiar (destacadas em verde)</p>
+      <p *ngIf="!authService.isLoggedIn()" class="visitante-info">• <strong>👀 VISITANTE:</strong> Faça login para participar ou administrar</p>
     </div>
   </div>
 </div>
@@ -264,16 +291,6 @@
   (fechar)="mostrarModalConfig = false"
   (configuracaoAtualizada)="onConfiguracaoAtualizada()">
 </app-configuracao-modal>
-
-<!-- Modal para gerenciar dupla -->
-<app-modal-gerenciar-dupla
-  [mostrar]="mostrarModalGerenciar"
-  [dupla]="duplaGerenciada"
-  [todasDuplas]="obterTodasDuplas()"
-  [getPosicaoNaPiramide]="getPosicaoNaPiramide.bind(this)"
-  (fechar)="fecharModalGerenciar()"
-  (duplaAtualizada)="onDuplaGerenciada()">
-</app-modal-gerenciar-dupla>
 
 <!-- Modal para adicionar dupla -->
 <app-adicionar-dupla 

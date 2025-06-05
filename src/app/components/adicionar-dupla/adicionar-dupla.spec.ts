@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AdicionarDupla } from './adicionar-dupla';
+import { AdicionarDuplaComponent } from './adicionar-dupla';
 
 describe('AdicionarDupla', () => {
-  let component: AdicionarDupla;
-  let fixture: ComponentFixture<AdicionarDupla>;
+  let component: AdicionarDuplaComponent;
+  let fixture: ComponentFixture<AdicionarDuplaComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AdicionarDupla]
+      imports: [AdicionarDuplaComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(AdicionarDupla);
+    fixture = TestBed.createComponent(AdicionarDuplaComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

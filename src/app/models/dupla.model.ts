@@ -1,3 +1,5 @@
+// src/app/models/dupla.model.ts - VERSÃO ATUALIZADA
+
 export interface Dupla {
   id: string;
   jogador1: string;
@@ -23,10 +25,41 @@ export interface NovaDupla {
   observacoes?: string;
 }
 
+// ✅ NOVA INTERFACE: Para edição de duplas
+export interface EditarDupla {
+  id: string;
+  jogador1: string;
+  jogador2: string;
+  telefone: string;
+  email: string;
+  observacoes: string;
+  vitorias: number;
+  derrotas: number;
+}
+
+// ✅ NOVA INTERFACE: Para resultados de reposicionamento
+export interface ResultadoReposicionamento {
+  success: boolean;
+  message: string;
+  duplasAfetadas?: number;
+  novasPosicoes?: { duplaId: string; novaBase: number; novaPosicao: number }[];
+}
+
 export interface EstatisticasDupla {
   totalJogos: number;
   percentualVitorias: number;
   jogosRecentes: number;
   melhorBase: number;
   tempoNaBase: number; // dias na base atual
+}
+
+// ✅ NOVA INTERFACE: Para movimentações na pirâmide
+export interface MovimentacaoDupla {
+  duplaId: string;
+  posicaoAnterior: number;
+  novaPosicao: number;
+  baseAnterior: number;
+  novaBase: number;
+  motivo: 'reposicionamento_manual' | 'vitoria' | 'derrota' | 'adicao' | 'remocao';
+  data: Date;
 }

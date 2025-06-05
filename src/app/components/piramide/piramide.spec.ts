@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Piramide } from './piramide';
+import { PiramideComponent } from './piramide';
 
 describe('Piramide', () => {
-  let component: Piramide;
-  let fixture: ComponentFixture<Piramide>;
+  let component: PiramideComponent;
+  let fixture: ComponentFixture<PiramideComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Piramide]
+      imports: [PiramideComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(Piramide);
+    fixture = TestBed.createComponent(PiramideComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
