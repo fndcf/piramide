@@ -1,4 +1,4 @@
-// src/app/components/gerenciar-piramides/gerenciar-piramides.ts
+// src/app/components/gerenciar-piramides/gerenciar-piramides.ts - ATUALIZADO
 
 import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -36,6 +36,11 @@ export class GerenciarPiramidesComponent implements OnInit {
   // Modal de estatísticas
   mostrarModalEstatisticas = false;
   estatisticasSelecionada: EstatisticasPiramide | null = null;
+  
+  // ✅ NOVO: Modal de confirmação para exclusão
+  mostrarModalConfirmacaoExclusao = false;
+  piramideParaExcluir: PiramideSeletor | null = null;
+  textoConfirmacao = ''; // ✅ NOVA VARIÁVEL para o texto de confirmação
   
   // Filtros e busca
   filtroStatus = 'todas';
@@ -236,12 +241,43 @@ export class GerenciarPiramidesComponent implements OnInit {
     this.mensagem = '';
   }
 
-  // ========== AÇÕES DA PIRÂMIDE ==========
+  // ========== ✅ NOVAS AÇÕES DA PIRÂMIDE: REATIVAÇÃO E EXCLUSÃO ==========
   
   async alterarStatus(piramide: PiramideSeletor, novoStatus: Piramide['status']) {
-    const confirmacao = confirm(
-      `Tem certeza que deseja alterar o status da pirâmide "${piramide.nome}" para "${novoStatus}"?`
-    );
+    let confirmacao = false;
+    let mensagemConfirmacao = '';
+
+    // Mensagens específicas para cada tipo de alteração
+    switch (novoStatus) {
+      case 'pausada':
+        mensagemConfirmacao = `Tem certeza que deseja PAUSAR a pirâmide "${piramide.nome}"?\n\n` +
+                             `⚠️ Efeitos:\n` +
+                             `• Não será possível adicionar duplas\n` +
+                             `• Não será possível criar desafios\n` +
+                             `• A pirâmide ficará "congelada"\n\n` +
+                             `Você pode reativá-la a qualquer momento.`;
+        break;
+        
+      case 'finalizada':
+        mensagemConfirmacao = `Tem certeza que deseja FINALIZAR a pirâmide "${piramide.nome}"?\n\n` +
+                             `⚠️ ATENÇÃO - Esta é uma ação restritiva:\n` +
+                             `• Não será possível adicionar duplas\n` +
+                             `• Não será possível criar desafios\n` +
+                             `• A pirâmide será marcada como concluída\n` +
+                             `• Após finalizar, você poderá EXCLUIR a pirâmide\n\n` +
+                             `Você pode reativar se necessário.`;
+        break;
+        
+      case 'ativa':
+        mensagemConfirmacao = `Tem certeza que deseja REATIVAR a pirâmide "${piramide.nome}"?\n\n` +
+                             `✅ Efeitos:\n` +
+                             `• Voltará a aceitar duplas\n` +
+                             `• Voltará a aceitar desafios\n` +
+                             `• Ficará totalmente funcional novamente`;
+        break;
+    }
+
+    confirmacao = confirm(mensagemConfirmacao);
     
     if (!confirmacao) return;
 
@@ -256,6 +292,53 @@ export class GerenciarPiramidesComponent implements OnInit {
     }
     
     this.loading = false;
+  }
+
+  // ✅ NOVA FUNÇÃO: Reativar pirâmide
+  async reativarPiramide(piramide: PiramideSeletor) {
+    await this.alterarStatus(piramide, 'ativa');
+  }
+
+  // ✅ NOVA FUNÇÃO: Confirmar exclusão
+  confirmarExclusao(piramide: PiramideSeletor) {
+    if (piramide.status !== 'finalizada') {
+      this.mostrarMensagem('Só é possível excluir pirâmides finalizadas', 'error');
+      return;
+    }
+
+    this.piramideParaExcluir = piramide;
+    this.mostrarModalConfirmacaoExclusao = true;
+  }
+
+  // ✅ NOVA FUNÇÃO: Excluir pirâmide
+  async excluirPiramide() {
+    if (!this.piramideParaExcluir) return;
+
+    this.loading = true;
+    const resultado = await this.piramidesService.excluirPiramide(this.piramideParaExcluir.id);
+    
+    if (resultado.success) {
+      this.mostrarMensagem(resultado.message, 'success');
+      await this.carregarDados();
+      this.fecharModalConfirmacaoExclusao();
+    } else {
+      this.mostrarMensagem(resultado.message, 'error');
+    }
+    
+    this.loading = false;
+  }
+
+  fecharModalConfirmacaoExclusao() {
+    this.mostrarModalConfirmacaoExclusao = false;
+    this.piramideParaExcluir = null;
+    this.textoConfirmacao = ''; // ✅ LIMPAR o texto de confirmação
+  }
+
+  // ✅ NOVA FUNÇÃO: Validar se a confirmação está correta
+  isConfirmacaoValida(): boolean {
+    if (!this.piramideParaExcluir) return false;
+    const textoEsperado = `EXCLUIR ${this.piramideParaExcluir.nome}`;
+    return this.textoConfirmacao.trim() === textoEsperado;
   }
 
   async arquivarPiramide(piramide: PiramideSeletor) {
@@ -328,6 +411,29 @@ export class GerenciarPiramidesComponent implements OnInit {
 
   isAtual(piramide: PiramideSeletor): boolean {
     return this.piramideAtual?.id === piramide.id;
+  }
+
+  // ✅ NOVOS MÉTODOS: Verificações de status
+  podeReativar(piramide: PiramideSeletor): boolean {
+    return piramide.status === 'pausada' || piramide.status === 'finalizada';
+  }
+
+  podeExcluir(piramide: PiramideSeletor): boolean {
+    return piramide.status === 'finalizada';
+  }
+
+  isPiramideEditavel(piramide: PiramideSeletor): boolean {
+    return piramide.status === 'ativa' || piramide.status === 'pausada';
+  }
+
+  getStatusTexto(status: string): string {
+    const textos = {
+      'ativa': 'Ativa',
+      'pausada': 'Pausada',
+      'finalizada': 'Finalizada',
+      'arquivada': 'Arquivada'
+    };
+    return textos[status as keyof typeof textos] || status;
   }
 
   fecharModal() {

@@ -1,4 +1,4 @@
-<!-- src/app/components/gerenciar-piramides/gerenciar-piramides.html -->
+<!-- src/app/components/gerenciar-piramides/gerenciar-piramides.html - ATUALIZADO -->
 
 <div class="modal-overlay" *ngIf="mostrar" (click)="fecharModal()">
   <div class="modal-content gerenciar-piramides" (click)="$event.stopPropagation()">
@@ -51,6 +51,9 @@
         <div class="piramide-card" 
              *ngFor="let piramide of piramidesFiltradas"
              [class.atual]="isAtual(piramide)"
+             [class.finalizada]="piramide.status === 'finalizada'"
+             [class.pausada]="piramide.status === 'pausada'"
+             [class.arquivada]="piramide.status === 'arquivada'"
              [style.border-left-color]="piramide.cor">
           
           <div class="piramide-header">
@@ -70,12 +73,13 @@
             
             <div class="piramide-status">
               <span class="status-badge" [class]="getStatusBadgeClass(piramide.status)">
-                {{ piramide.status }}
+                {{ getStatusTexto(piramide.status) }}
               </span>
               <span class="atual-badge" *ngIf="isAtual(piramide)">ATUAL</span>
             </div>
           </div>
           
+          <!-- ✅ AÇÕES ATUALIZADAS COM NOVAS FUNCIONALIDADES -->
           <div class="piramide-acoes">
             <button class="btn-acao selecionar" 
                     (click)="selecionarPiramide(piramide)"
@@ -92,8 +96,17 @@
             
             <button class="btn-acao editar" 
                     (click)="abrirModalEdicao(piramide)"
+                    [disabled]="!isPiramideEditavel(piramide)"
                     title="Editar pirâmide">
               ✏️
+            </button>
+            
+            <!-- ✅ BOTÃO DE REATIVAÇÃO (só aparece para pausadas/finalizadas) -->
+            <button *ngIf="podeReativar(piramide)" 
+                    class="btn-acao reativar" 
+                    (click)="reativarPiramide(piramide)"
+                    title="Reativar pirâmide">
+              🔄 Reativar
             </button>
             
             <div class="dropdown-acoes">
@@ -116,8 +129,28 @@
                         class="acao-perigosa">
                   📦 Arquivar
                 </button>
+                
+                <!-- ✅ NOVA OPÇÃO: Excluir (só para finalizadas) -->
+                <button *ngIf="podeExcluir(piramide)" 
+                        (click)="confirmarExclusao(piramide)"
+                        class="acao-muito-perigosa">
+                  🗑️ Excluir Permanentemente
+                </button>
               </div>
             </div>
+          </div>
+
+          <!-- ✅ AVISO PARA PIRÂMIDES FINALIZADAS -->
+          <div *ngIf="piramide.status === 'finalizada'" class="aviso-finalizada">
+            ⚠️ Pirâmide finalizada: Não aceita duplas nem desafios. 
+            <button class="link-button" (click)="reativarPiramide(piramide)">Reativar</button> ou 
+            <button class="link-button acao-perigosa" (click)="confirmarExclusao(piramide)">Excluir</button>
+          </div>
+
+          <!-- ✅ AVISO PARA PIRÂMIDES PAUSADAS -->
+          <div *ngIf="piramide.status === 'pausada'" class="aviso-pausada">
+            ⏸️ Pirâmide pausada: Operações suspensas temporariamente. 
+            <button class="link-button" (click)="reativarPiramide(piramide)">Reativar</button>
           </div>
         </div>
         
@@ -146,7 +179,84 @@
   </div>
 </div>
 
-<!-- Modal Nova Pirâmide -->
+<!-- ✅ NOVO MODAL: Confirmação de exclusão -->
+<div class="modal-overlay" *ngIf="mostrarModalConfirmacaoExclusao" (click)="fecharModalConfirmacaoExclusao()">
+  <div class="modal-content confirmacao-exclusao" (click)="$event.stopPropagation()">
+    <div class="modal-header perigo">
+      <h3>🗑️ Excluir Pirâmide</h3>
+      <button class="btn-close" (click)="fecharModalConfirmacaoExclusao()">×</button>
+    </div>
+    
+    <div class="modal-body" *ngIf="piramideParaExcluir">
+      <div class="aviso-perigo">
+        <h4>⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!</h4>
+        <p>Você está prestes a excluir permanentemente a pirâmide:</p>
+        
+        <div class="piramide-a-excluir">
+          <span class="icone">{{ piramideParaExcluir.icone }}</span>
+          <div class="info">
+            <strong>{{ piramideParaExcluir.nome }}</strong>
+            <span>{{ getCategoriaNome(piramideParaExcluir.categoria) }} • {{ piramideParaExcluir.totalDuplas }} duplas</span>
+          </div>
+        </div>
+        
+        <div class="consequencias">
+          <h5>🔥 O que será perdido para sempre:</h5>
+          <ul>
+            <li>✗ Todas as duplas desta pirâmide</li>
+            <li>✗ Todo o histórico de jogos e desafios</li>
+            <li>✗ Todas as estatísticas e rankings</li>
+            <li>✗ Todas as configurações personalizadas</li>
+            <li>✗ Esta pirâmide não poderá ser recuperada</li>
+          </ul>
+        </div>
+        
+        <div class="alternativas">
+          <h5>💡 Alternativas mais seguras:</h5>
+          <ul>
+            <li>📦 <strong>Arquivar:</strong> Mantem os dados, mas oculta a pirâmide</li>
+            <li>⏸️ <strong>Pausar:</strong> Suspende temporariamente as atividades</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="confirmacao-digitacao">
+        <p><strong>Para confirmar, digite exatamente:</strong> <code>EXCLUIR {{ piramideParaExcluir.nome }}</code></p>
+        <input type="text" 
+               [(ngModel)]="textoConfirmacao"
+               placeholder="Digite a confirmação aqui..."
+               class="input-confirmacao"
+               [class.valida]="isConfirmacaoValida()"
+               [class.invalida]="textoConfirmacao.length > 0 && !isConfirmacaoValida()"
+               autocomplete="off">
+        
+        <!-- ✅ INDICADOR VISUAL -->
+        <div class="status-confirmacao" *ngIf="textoConfirmacao.length > 0">
+          <span *ngIf="isConfirmacaoValida()" class="status-ok">✅ Confirmação correta</span>
+          <span *ngIf="!isConfirmacaoValida()" class="status-erro">❌ Digite exatamente como mostrado acima</span>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button type="button" 
+                class="btn-cancelar" 
+                (click)="fecharModalConfirmacaoExclusao()"
+                [disabled]="loading">
+          Cancelar (Recomendado)
+        </button>
+        <button type="button" 
+                class="btn-excluir" 
+                (click)="excluirPiramide()"
+                [disabled]="loading || !isConfirmacaoValida()">
+          <span *ngIf="loading">Excluindo...</span>
+          <span *ngIf="!loading">🗑️ Excluir PERMANENTEMENTE</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nova Pirâmide (mantido igual) -->
 <div class="modal-overlay" *ngIf="mostrarModalNova" (click)="fecharModalNova()">
   <div class="modal-content nova-piramide" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -263,7 +373,7 @@
   </div>
 </div>
 
-<!-- Modal Edição -->
+<!-- Modal Edição (mantido igual) -->
 <div class="modal-overlay" *ngIf="mostrarModalEdicao" (click)="fecharModalEdicao()">
   <div class="modal-content edicao-piramide" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -324,7 +434,7 @@
   </div>
 </div>
 
-<!-- Modal Estatísticas -->
+<!-- Modal Estatísticas (mantido igual) -->
 <div class="modal-overlay" *ngIf="mostrarModalEstatisticas" (click)="fecharModalEstatisticas()">
   <div class="modal-content estatisticas-piramide" (click)="$event.stopPropagation()">
     <div class="modal-header">

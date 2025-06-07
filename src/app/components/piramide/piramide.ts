@@ -249,8 +249,15 @@ export class PiramideComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.isPiramideAtiva()) {
-      alert('Não é possível criar desafios em uma pirâmide pausada ou finalizada.');
+    // ✅ NOVA VALIDAÇÃO: Verificar se a pirâmide permite desafios
+    if (!this.piramideAtual) {
+      alert('Nenhuma pirâmide selecionada.');
+      return;
+    }
+
+    const podeDesafiar = this.piramidesService.podeCriarDesafios(this.piramideAtual.id);
+    if (!podeDesafiar.pode) {
+      alert(`❌ Não é possível criar desafios!\n\n${podeDesafiar.motivo}`);
       return;
     }
 
@@ -297,11 +304,26 @@ export class PiramideComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ✅ NOVA FUNÇÃO: Verificar se pode adicionar duplas
+  podeAdicionarDuplas(): boolean {
+    if (!this.piramideAtual) return false;
+    
+    const podeAdicionar = this.piramidesService.podeAdicionarDuplas(this.piramideAtual.id);
+    return podeAdicionar.pode;
+  }
+
   async removerDupla(event: Event, dupla: Dupla) {
     event.stopPropagation();
     
-    if (!this.isPiramideAtiva()) {
-      alert('Não é possível remover duplas de uma pirâmide pausada ou finalizada.');
+    // ✅ NOVA VALIDAÇÃO: Verificar se a pirâmide permite modificações
+    if (!this.piramideAtual) {
+      alert('Nenhuma pirâmide selecionada.');
+      return;
+    }
+
+    const podeRemover = this.piramidesService.podeAdicionarDuplas(this.piramideAtual.id);
+    if (!podeRemover.pode) {
+      alert(`❌ Não é possível remover duplas!\n\n${podeRemover.motivo}`);
       return;
     }
     
@@ -317,6 +339,7 @@ export class PiramideComponent implements OnInit, OnDestroy {
       }
     }
   }
+  
 
   // ========== VALIDAÇÃO E LÓGICA DE DESAFIOS ==========
 
@@ -401,8 +424,15 @@ export class PiramideComponent implements OnInit, OnDestroy {
   // ========== MÉTODOS DE DESAFIO E RESULTADO ==========
 
   criarDesafio() {
-    if (!this.isPiramideAtiva()) {
-      alert('Não é possível criar desafios em uma pirâmide pausada ou finalizada.');
+    // ✅ NOVA VALIDAÇÃO: Verificar se a pirâmide permite desafios
+    if (!this.piramideAtual) {
+      alert('Nenhuma pirâmide selecionada.');
+      return;
+    }
+
+    const podeDesafiar = this.piramidesService.podeCriarDesafios(this.piramideAtual.id);
+    if (!podeDesafiar.pode) {
+      alert(`❌ Não é possível criar desafios!\n\n${podeDesafiar.motivo}`);
       return;
     }
 
@@ -602,9 +632,34 @@ export class PiramideComponent implements OnInit, OnDestroy {
     return '';
   }
 
+  // ✅ ATUALIZAÇÃO: getStatusUsuario com informações de proteção
   getStatusUsuario(): string {
     if (!this.authService.isLoggedIn()) return 'Visitante (não logado)';
-    if (this.isAdmin()) return `Administrador - ${this.getNomePiramideAtual()}`;
+    
+    if (this.isAdmin()) {
+      let status = `Administrador - ${this.getNomePiramideAtual()}`;
+      
+      if (this.piramideAtual) {
+        const statusPiramide = this.piramideAtual.status;
+        switch (statusPiramide) {
+          case 'pausada':
+            status += ' (⏸️ PAUSADA - Operações suspensas)';
+            break;
+          case 'finalizada':
+            status += ' (🏁 FINALIZADA - Somente leitura)';
+            break;
+          case 'arquivada':
+            status += ' (📦 ARQUIVADA)';
+            break;
+          case 'ativa':
+            status += ' (✅ ATIVA)';
+            break;
+        }
+      }
+      
+      return status;
+    }
+    
     if (this.isJogador()) return `Jogador - ${this.getNomePiramideAtual()}`;
     return 'Usuário';
   }
@@ -655,8 +710,10 @@ export class PiramideComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  // ✅ ATUALIZAÇÃO: getTituloCard com informações de proteção
   getTituloCard(dupla: Dupla): string {
     const piramideInfo = this.piramideAtual ? ` (${this.piramideAtual.nome})` : '';
+    const statusInfo = this.piramideAtual ? this.getStatusInfoPiramide() : '';
     
     if (this.isAdmin()) {
       if (this.duplasSelecionadas.length === 1 && !dupla.selected) {
@@ -677,9 +734,9 @@ export class PiramideComponent implements OnInit, OnDestroy {
         const validacao = this.validarDesafio(desafiante, desafiado);
         
         if (validacao.valido) {
-          return `✅ SELEÇÃO VÁLIDA PARA DESAFIO${piramideInfo}\n\n${validacao.explicacao}\n\nClique para criar: ${desafiante.jogador1}/${desafiante.jogador2} vs ${desafiado.jogador1}/${desafiado.jogador2}`;
+          return `✅ SELEÇÃO VÁLIDA PARA DESAFIO${piramideInfo}${statusInfo}\n\n${validacao.explicacao}\n\nClique para criar: ${desafiante.jogador1}/${desafiante.jogador2} vs ${desafiado.jogador1}/${desafiado.jogador2}`;
         } else {
-          return `❌ SELEÇÃO INVÁLIDA PARA DESAFIO${piramideInfo}\n\n${validacao.motivo}\n\n${validacao.explicacao}`;
+          return `❌ SELEÇÃO INVÁLIDA PARA DESAFIO${piramideInfo}${statusInfo}\n\n${validacao.motivo}\n\n${validacao.explicacao}`;
         }
       }
 
@@ -688,8 +745,17 @@ export class PiramideComponent implements OnInit, OnDestroy {
         this.duplasSelecionadas.length === 1 ? 
           'Clique para fazer o segundo par do desafio' : 
           'Máximo de 2 duplas selecionadas';
-          
-      return `👑 ADMIN - ${dupla.jogador1}/${dupla.jogador2}${piramideInfo}\nBase ${dupla.base}, Pos ${dupla.posicao} (${this.getPosicaoNaPiramide(dupla)}º lugar)\n\n${statusSelecao}`;
+
+      // ✅ INFORMAÇÃO DE PROTEÇÃO PARA ADMINS
+      let protecaoInfo = '';
+      if (this.piramideAtual) {
+        const podeDesafiar = this.piramidesService.podeCriarDesafios(this.piramideAtual.id);
+        if (!podeDesafiar.pode) {
+          protecaoInfo = `\n\n⚠️ LIMITAÇÃO: ${podeDesafiar.motivo}`;
+        }
+      }
+            
+      return `👑 ADMIN - ${dupla.jogador1}/${dupla.jogador2}${piramideInfo}${statusInfo}\nBase ${dupla.base}, Pos ${dupla.posicao} (${this.getPosicaoNaPiramide(dupla)}º lugar)\n\n${statusSelecao}${protecaoInfo}`;
     }
 
     if (this.isMinhaDupla(dupla)) {
@@ -737,6 +803,24 @@ export class PiramideComponent implements OnInit, OnDestroy {
     return `${dupla.jogador1}/${dupla.jogador2}${piramideInfo} - ${this.getPosicaoNaPiramide(dupla)}º lugar\nBase ${dupla.base}, Posição ${dupla.posicao}\nEstatísticas: ${dupla.vitorias}V - ${dupla.derrotas}D`;
   }
 
+  // ✅ NOVA FUNÇÃO: Obter informações de status da pirâmide
+  private getStatusInfoPiramide(): string {
+    if (!this.piramideAtual) return '';
+    
+    switch (this.piramideAtual.status) {
+      case 'pausada':
+        return ' - ⏸️ PAUSADA';
+      case 'finalizada':
+        return ' - 🏁 FINALIZADA';
+      case 'arquivada':
+        return ' - 📦 ARQUIVADA';
+      case 'ativa':
+        return ' - ✅ ATIVA';
+      default:
+        return '';
+    }
+  }
+
   getQuantidadeDesafiosDisponiveis(): number {
     if (!this.isJogador() || !this.jogadorInfo) return 0;
     
@@ -777,8 +861,30 @@ export class PiramideComponent implements OnInit, OnDestroy {
     this.carregarDuplas();
   }
 
+  // ✅ ATUALIZAÇÃO: Evento de dupla adicionada com verificação
   onDuplaAdicionada() {
+    if (!this.podeAdicionarDuplas()) {
+      alert('Esta pirâmide não aceita mais duplas no momento.');
+      return;
+    }
+    
     this.carregarDuplas();
+  }
+
+  // ✅ NOVA FUNÇÃO: Verificar se botões devem estar habilitados
+  shouldShowAdminControls(): boolean {
+    return this.isAdmin() && this.piramideAtual !== null;
+  }
+
+  shouldEnableAddDupla(): boolean {
+    return this.shouldShowAdminControls() && this.podeAdicionarDuplas();
+  }
+
+  shouldEnableCreateChallenge(): boolean {
+    if (!this.shouldShowAdminControls() || !this.piramideAtual) return false;
+    
+    const podeDesafiar = this.piramidesService.podeCriarDesafios(this.piramideAtual.id);
+    return podeDesafiar.pode;
   }
 
   async onConfiguracaoAtualizada() {

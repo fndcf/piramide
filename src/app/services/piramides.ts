@@ -1,4 +1,4 @@
-// src/app/services/piramides.service.ts - NOVO SERVICE
+// src/app/services/piramides.ts - ATUALIZADO COM MELHORIAS
 
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
@@ -193,7 +193,178 @@ export class PiramidesService {
     return this.piramideAtual?.id || null;
   }
 
-  // ========== OPERAÇÕES AVANÇADAS ==========
+  // ========== ✅ NOVAS FUNCIONALIDADES: REATIVAÇÃO E EXCLUSÃO ==========
+  
+  async reativarPiramide(piramideId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      await this.delay(300);
+      
+      const piramide = this.piramides.find(p => p.id === piramideId);
+      
+      if (!piramide) {
+        return {
+          success: false,
+          message: 'Pirâmide não encontrada'
+        };
+      }
+
+      if (piramide.status === 'ativa') {
+        return {
+          success: false,
+          message: 'Esta pirâmide já está ativa'
+        };
+      }
+
+      if (piramide.status === 'arquivada') {
+        return {
+          success: false,
+          message: 'Não é possível reativar uma pirâmide arquivada'
+        };
+      }
+
+      // Reativar a pirâmide
+      const index = this.piramides.findIndex(p => p.id === piramideId);
+      this.piramides[index] = {
+        ...this.piramides[index],
+        status: 'ativa',
+        dataFim: undefined // Remove data de fim se existir
+      };
+
+      // Se for a pirâmide atual, atualizar o subject
+      if (this.piramideAtual?.id === piramideId) {
+        this.piramideAtual = this.piramides[index];
+        this.piramideAtualSubject.next(this.piramideAtual);
+      }
+
+      this.salvarDados();
+
+      return {
+        success: true,
+        message: `Pirâmide "${piramide.nome}" foi reativada com sucesso!`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Erro ao reativar pirâmide'
+      };
+    }
+  }
+
+  async excluirPiramide(piramideId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      await this.delay(500);
+      
+      const piramide = this.piramides.find(p => p.id === piramideId);
+      
+      if (!piramide) {
+        return {
+          success: false,
+          message: 'Pirâmide não encontrada'
+        };
+      }
+
+      // ✅ REGRA: Só pode excluir pirâmides finalizadas
+      if (piramide.status !== 'finalizada') {
+        return {
+          success: false,
+          message: 'Só é possível excluir pirâmides que estão finalizadas'
+        };
+      }
+
+      // Verificar se é a última pirâmide
+      const piramidesAtivas = this.piramides.filter(p => p.status !== 'arquivada' && p.id !== piramideId);
+      if (piramidesAtivas.length === 0) {
+        return {
+          success: false,
+          message: 'Não é possível excluir a última pirâmide do sistema'
+        };
+      }
+
+      // Se for a pirâmide atual, selecionar outra
+      if (this.piramideAtual?.id === piramideId) {
+        const outraPiramide = piramidesAtivas.find(p => p.status === 'ativa') || piramidesAtivas[0];
+        if (outraPiramide) {
+          await this.selecionarPiramide(outraPiramide.id);
+        }
+      }
+
+      // Remover a pirâmide completamente
+      this.piramides = this.piramides.filter(p => p.id !== piramideId);
+      this.salvarDados();
+
+      // TODO: Aqui você também deve excluir todas as duplas desta pirâmide
+      // Isso seria feito no DuplasService
+      // await this.duplasService.excluirTodasDuplasPiramide(piramideId);
+
+      return {
+        success: true,
+        message: `Pirâmide "${piramide.nome}" foi excluída permanentemente`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Erro ao excluir pirâmide'
+      };
+    }
+  }
+
+  // ========== ✅ VALIDAÇÕES DE PROTEÇÃO ==========
+  
+  isPiramideEditavel(piramideId: string): boolean {
+    const piramide = this.piramides.find(p => p.id === piramideId);
+    return piramide?.status === 'ativa' || piramide?.status === 'pausada';
+  }
+
+  isPiramideFinalizadaOuArquivada(piramideId: string): boolean {
+    const piramide = this.piramides.find(p => p.id === piramideId);
+    return piramide?.status === 'finalizada' || piramide?.status === 'arquivada';
+  }
+
+  podeAdicionarDuplas(piramideId: string): { pode: boolean; motivo?: string } {
+    const piramide = this.piramides.find(p => p.id === piramideId);
+    
+    if (!piramide) {
+      return { pode: false, motivo: 'Pirâmide não encontrada' };
+    }
+
+    if (piramide.status === 'finalizada') {
+      return { pode: false, motivo: 'Não é possível adicionar duplas em uma pirâmide finalizada' };
+    }
+
+    if (piramide.status === 'arquivada') {
+      return { pode: false, motivo: 'Não é possível adicionar duplas em uma pirâmide arquivada' };
+    }
+
+    if (piramide.status === 'pausada') {
+      return { pode: false, motivo: 'Pirâmide está pausada. Reative-a para adicionar duplas' };
+    }
+
+    return { pode: true };
+  }
+
+  podeCriarDesafios(piramideId: string): { pode: boolean; motivo?: string } {
+    const piramide = this.piramides.find(p => p.id === piramideId);
+    
+    if (!piramide) {
+      return { pode: false, motivo: 'Pirâmide não encontrada' };
+    }
+
+    if (piramide.status === 'finalizada') {
+      return { pode: false, motivo: 'Não é possível criar desafios em uma pirâmide finalizada' };
+    }
+
+    if (piramide.status === 'arquivada') {
+      return { pode: false, motivo: 'Não é possível criar desafios em uma pirâmide arquivada' };
+    }
+
+    if (piramide.status === 'pausada') {
+      return { pode: false, motivo: 'Pirâmide está pausada. Reative-a para criar desafios' };
+    }
+
+    return { pode: true };
+  }
+
+  // ========== OPERAÇÕES AVANÇADAS (MANTIDAS) ==========
   
   async atualizarPiramide(piramideId: string, dados: Partial<Piramide>): Promise<{ success: boolean; message: string }> {
     try {
@@ -243,13 +414,48 @@ export class PiramidesService {
   }
 
   async alterarStatusPiramide(piramideId: string, novoStatus: Piramide['status']): Promise<{ success: boolean; message: string }> {
-    const resultado = await this.atualizarPiramide(piramideId, { status: novoStatus });
-    
-    if (resultado.success) {
-      resultado.message = `Status alterado para "${novoStatus}" com sucesso!`;
+    try {
+      await this.delay(300);
+      
+      const piramide = this.piramides.find(p => p.id === piramideId);
+      
+      if (!piramide) {
+        return {
+          success: false,
+          message: 'Pirâmide não encontrada'
+        };
+      }
+
+      // ✅ VALIDAÇÕES ESPECIAIS PARA FINALIZAÇÃO
+      if (novoStatus === 'finalizada') {
+        const dados: Partial<Piramide> = { 
+          status: 'finalizada',
+          dataFim: new Date()
+        };
+        
+        const resultado = await this.atualizarPiramide(piramideId, dados);
+        
+        if (resultado.success) {
+          resultado.message = `Pirâmide "${piramide.nome}" foi finalizada. Agora você pode excluí-la se necessário.`;
+        }
+        
+        return resultado;
+      }
+
+      // Para outros status, usar a função normal
+      const resultado = await this.atualizarPiramide(piramideId, { status: novoStatus });
+      
+      if (resultado.success) {
+        resultado.message = `Status alterado para "${novoStatus}" com sucesso!`;
+      }
+      
+      return resultado;
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Erro ao alterar status'
+      };
     }
-    
-    return resultado;
   }
 
   async arquivarPiramide(piramideId: string): Promise<{ success: boolean; message: string }> {
@@ -308,6 +514,24 @@ export class PiramidesService {
         return {
           success: false,
           message: 'Pirâmide de origem ou destino não encontrada'
+        };
+      }
+
+      // ✅ VALIDAR SE PODE MODIFICAR AS PIRÂMIDES
+      const podeOrigemPerder = this.podeAdicionarDuplas(piramideOrigem.id);
+      const podeDestinoReceber = this.podeAdicionarDuplas(piramideDestino.id);
+      
+      if (!podeOrigemPerder.pode) {
+        return {
+          success: false,
+          message: `Pirâmide origem: ${podeOrigemPerder.motivo}`
+        };
+      }
+      
+      if (!podeDestinoReceber.pode) {
+        return {
+          success: false,
+          message: `Pirâmide destino: ${podeDestinoReceber.motivo}`
         };
       }
 
