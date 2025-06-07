@@ -1,45 +1,63 @@
-export interface EstadoPiramide {
+export interface Piramide {
   id: string;
-  bases: {
-    [key: number]: string[]; // base -> array de IDs das duplas
-  };
-  ultimaAtualizacao: Date;
-  temporada: string;
-  ativa: boolean;
+  nome: string;
+  descricao: string;
+  categoria: 'masculino' | 'feminino' | 'misto' | 'iniciante' | 'avancado' | 'custom';
+  status: 'ativa' | 'pausada' | 'finalizada' | 'arquivada';
+  maxDuplas: number; // padrão 45, mas pode ser configurável
+  dataInicio: Date;
+  dataFim?: Date;
+  criadoPor: string;
+  configuracao: ConfiguracaoPiramideEspecifica;
+  cor: string; // cor tema da pirâmide
+  icone: string; // emoji ou ícone da pirâmide
+  ativa: boolean; // se está sendo exibida atualmente
 }
 
-export interface ConfiguracaoPiramide {
-  id: string;
-  maxDuplasTotal: number; // 45 duplas (1+2+3+...+9)
-  pontosVitoriaIgual: number; // pontos por vitória na mesma base
-  pontosVitoriaSuperior: number; // pontos por vitória contra base superior
-  pontosDerrota: number; // pontos perdidos por derrota
-  pontosNaoAceitar: number; // pontos perdidos por não aceitar desafio
-  diasPrazoResposta: number; // dias para responder desafio
-  maxDesafiosPorSemana: number; // limite de desafios por dupla
-  basesPermiteDesafio: number; // quantas bases acima pode desafiar
+export interface ConfiguracaoPiramideEspecifica {
+  posicaoLimiteDesafioTopo: number;
+  permitirDesafiosEntrePiramides: boolean;
+  diasPrazoResposta: number;
+  maxDesafiosPorSemana: number;
+  pontosVitoriaIgual: number;
+  pontosVitoriaSuperior: number;
+  pontosDerrota: number;
+  regrasPersonalizadas?: string;
 }
 
-export interface MovimentacaoPiramide {
-  id: string;
-  duplaId: string;
-  baseAnterior: number;
-  posicaoAnterior: number;
-  baseNova: number;
-  posicaoNova: number;
-  motivo: 'vitoria' | 'derrota' | 'inatividade' | 'admin';
-  jogoId?: string;
-  data: Date;
-  observacoes?: string;
+export interface NovaPiramide {
+  nome: string;
+  descricao: string;
+  categoria: 'masculino' | 'feminino' | 'misto' | 'iniciante' | 'avancado' | 'custom';
+  maxDuplas?: number;
+  cor?: string;
+  icone?: string;
+  configuracao?: Partial<ConfiguracaoPiramideEspecifica>;
 }
 
-export interface RankingGeral {
-  dupla: string;
+// Atualizar interface da Dupla para incluir pirâmideId
+export interface Dupla {
+  id: string;
+  piramideId: string; // NOVO: ID da pirâmide
+  jogador1: string;
+  jogador2: string;
   base: number;
   posicao: number;
   pontos: number;
   vitorias: number;
   derrotas: number;
-  percentual: number;
-  jogosRecentes: number;
+  ativa: boolean;
+  dataIngresso: Date;
+  telefone?: string;
+  email?: string;
+  observacoes?: string;
+  selected?: boolean;
+}
+
+export interface NovaDupla {
+  jogador1: string;
+  jogador2: string;
+  telefone?: string;
+  email?: string;
+  observacoes?: string;
 }

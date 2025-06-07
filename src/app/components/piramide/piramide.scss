@@ -1641,3 +1641,149 @@ h2 {
     gap: 0.5rem;
   }
 }
+
+// ========== SELETOR PARA VISITANTES ==========
+.seletor-visitante {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+// ========== INFORMAÇÕES DA PIRÂMIDE PARA LOGADOS ==========
+.piramide-info-logado {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.piramide-atual-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 1rem 2rem;
+  border-radius: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-left: 4px solid #667eea;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.3s;
+  max-width: 500px;
+  width: 100%;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+
+  .piramide-icone {
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+
+  .piramide-detalhes {
+    flex: 1;
+    min-width: 0;
+
+    h3 {
+      margin: 0 0 0.25rem 0;
+      color: white;
+      font-size: 1.2rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .piramide-status {
+      color: #4ecdc4;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+  }
+
+  .btn-trocar-piramide {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+    }
+  }
+}
+
+// ========== MELHORIAS NO ACCESS-CONTROLS ==========
+.access-controls {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.login-section {
+  text-align: center;
+  
+  .access-info {
+    margin-top: 0.5rem;
+    opacity: 0.8;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+}
+
+// ========== RESPONSIVO PARA NOVOS ELEMENTOS ==========
+@media (max-width: 768px) {
+  .piramide-atual-card {
+    padding: 1rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+
+    .piramide-detalhes h3 {
+      font-size: 1.1rem;
+    }
+
+    .btn-trocar-piramide {
+      width: 100%;
+      padding: 10px;
+    }
+  }
+
+  .seletor-visitante {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .piramide-atual-card {
+    margin: 0 1rem;
+    
+    .piramide-icone {
+      width: 40px;
+      height: 40px;
+      font-size: 1.5rem;
+    }
+
+    .piramide-detalhes h3 {
+      font-size: 1rem;
+    }
+  }
+}

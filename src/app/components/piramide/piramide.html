@@ -3,6 +3,32 @@
     <h2>🏆 Pirâmide Beach Tennis</h2>
     <p class="subtitle">Sistema de classificação por desafios</p>
     
+    <!-- ✅ NOVO: Seletor de Pirâmide para Visitantes -->
+    <div *ngIf="!authService.isLoggedIn()" class="seletor-visitante">
+      <app-seletor-piramide 
+        (piramideSelecionada)="onPiramideSelecionadaVisitante($event)">
+      </app-seletor-piramide>
+    </div>
+    
+    <!-- ✅ ATUALIZADO: Informações da pirâmide atual para usuários logados -->
+    <div *ngIf="authService.isLoggedIn() && piramideAtual" class="piramide-info-logado">
+      <div class="piramide-atual-card" [style.border-left-color]="getCorPiramideAtual()">
+        <span class="piramide-icone" [style.color]="getCorPiramideAtual()">
+          {{ getIconePiramideAtual() }}
+        </span>
+        <div class="piramide-detalhes">
+          <h3>{{ getNomePiramideAtual() }}</h3>
+          <span class="piramide-status">{{ getStatusPiramideAtual() }}</span>
+        </div>
+        <button *ngIf="isAdmin()" 
+                class="btn-trocar-piramide"
+                (click)="mostrarModalGerenciarPiramides = true"
+                title="Gerenciar Pirâmides">
+          🏗️ Gerenciar
+        </button>
+      </div>
+    </div>
+    
     <!-- Controles de Acesso -->
     <div class="access-controls">
       <!-- Se não estiver logado -->
@@ -15,7 +41,7 @@
             🏐 Login Jogador  
           </button>
         </div>
-        <p class="access-info">Escolha seu tipo de acesso à pirâmide</p>
+        <p class="access-info">Faça login para participar ou administrar</p>
       </div>
       
       <!-- Se estiver logado -->
@@ -298,3 +324,9 @@
   (fechar)="mostrarModalAdicionar = false"
   (duplaAdicionada)="onDuplaAdicionada()">
 </app-adicionar-dupla>
+
+<app-gerenciar-piramides 
+  [mostrar]="mostrarModalGerenciarPiramides"
+  (fechar)="mostrarModalGerenciarPiramides = false"
+  (piramideSelecionada)="onPiramideSelecionada($event)">
+</app-gerenciar-piramides>

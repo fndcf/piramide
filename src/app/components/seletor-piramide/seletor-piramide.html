@@ -1,0 +1,84 @@
+<!-- src/app/components/seletor-piramide/seletor-piramide.html -->
+
+<div class="seletor-piramide-container">
+  <div class="seletor-header">
+    <h4>🏆 Visualizar Pirâmide</h4>
+    <p class="seletor-subtitle">Escolha qual pirâmide deseja acompanhar</p>
+  </div>
+
+  <div class="piramide-selecionada" 
+       (click)="toggleDropdown()"
+       [class.aberto]="mostrarDropdown">
+    
+    <div class="piramide-info" *ngIf="piramideAtual && !carregando">
+      <span class="piramide-icone" [style.color]="piramideAtual.cor">
+        {{ piramideAtual.icone }}
+      </span>
+      <div class="piramide-detalhes">
+        <span class="piramide-nome">{{ piramideAtual.nome }}</span>
+        <div class="piramide-meta">
+          <span class="categoria">{{ getCategoriaTexto(piramideAtual.categoria) }}</span>
+          <span class="separador">•</span>
+          <span class="status" [class]="getStatusBadgeClass(piramideAtual.status)">
+            {{ getStatusTexto(piramideAtual.status) }}
+          </span>
+        </div>
+      </div>
+      <div class="seta-dropdown">
+        <span [class.rotacionada]="mostrarDropdown">▼</span>
+      </div>
+    </div>
+
+    <div class="carregando-info" *ngIf="carregando">
+      <div class="spinner-pequeno"></div>
+      <span>Carregando pirâmides...</span>
+    </div>
+  </div>
+
+  <!-- Dropdown de Pirâmides -->
+  <div class="dropdown-piramides" *ngIf="mostrarDropdown" (click)="$event.stopPropagation()">
+    <div class="dropdown-header">
+      <span>Pirâmides Disponíveis</span>
+      <button class="btn-fechar-dropdown" (click)="fecharDropdown()">×</button>
+    </div>
+
+    <div class="piramides-lista">
+      <div class="piramide-opcao" 
+           *ngFor="let piramide of piramides"
+           [class.atual]="piramide.id === piramideAtual?.id"
+           (click)="selecionarPiramide(piramide)">
+        
+        <div class="opcao-conteudo">
+          <span class="opcao-icone" [style.color]="piramide.cor">
+            {{ piramide.icone }}
+          </span>
+          <div class="opcao-info">
+            <span class="opcao-nome">{{ piramide.nome }}</span>
+            <div class="opcao-meta">
+              <span class="opcao-categoria">{{ getCategoriaTexto(piramide.categoria) }}</span>
+              <span class="separador">•</span>
+              <span class="opcao-status" [class]="getStatusBadgeClass(piramide.status)">
+                {{ getStatusTexto(piramide.status) }}
+              </span>
+            </div>
+          </div>
+          <div class="opcao-indicador" *ngIf="piramide.id === piramideAtual?.id">
+            ✓
+          </div>
+        </div>
+      </div>
+
+      <!-- Mensagem quando não há pirâmides -->
+      <div class="sem-piramides" *ngIf="piramides.length === 0 && !carregando">
+        <span class="icone-vazio">🏗️</span>
+        <p>Nenhuma pirâmide disponível no momento</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay para fechar dropdown -->
+  <div class="dropdown-overlay" 
+       *ngIf="mostrarDropdown" 
+       (click)="fecharDropdown()">
+  </div>
+</div>

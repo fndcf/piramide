@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { PiramideService } from './piramide';
+import { PiramidesService } from './piramides';
 
 describe('Piramide', () => {
-  let service: PiramideService;
+  let service: PiramidesService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(PiramideService);
+    service = TestBed.inject(PiramidesService);
   });
 
   it('should be created', () => {

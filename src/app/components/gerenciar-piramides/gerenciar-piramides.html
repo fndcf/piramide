@@ -1,0 +1,380 @@
+<!-- src/app/components/gerenciar-piramides/gerenciar-piramides.html -->
+
+<div class="modal-overlay" *ngIf="mostrar" (click)="fecharModal()">
+  <div class="modal-content gerenciar-piramides" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>🏗️ Gerenciar Pirâmides</h3>
+      <button class="btn-close" (click)="fecharModal()">×</button>
+    </div>
+    
+    <div class="modal-body">
+      <!-- Filtros e Controles -->
+      <div class="controles-superiores">
+        <div class="filtros">
+          <div class="filtro-grupo">
+            <label>Status:</label>
+            <select [(ngModel)]="filtroStatus" class="filtro-select">
+              <option value="todas">Todas</option>
+              <option value="ativa">Ativas</option>
+              <option value="pausada">Pausadas</option>
+              <option value="finalizada">Finalizadas</option>
+              <option value="arquivada">Arquivadas</option>
+            </select>
+          </div>
+          
+          <div class="filtro-grupo">
+            <label>Categoria:</label>
+            <select [(ngModel)]="filtroCategoria" class="filtro-select">
+              <option value="todas">Todas</option>
+              <option *ngFor="let cat of categorias" [value]="cat.value">{{ cat.label }}</option>
+            </select>
+          </div>
+          
+          <div class="filtro-grupo busca">
+            <label>Buscar:</label>
+            <input type="text" 
+                   [(ngModel)]="termoBusca" 
+                   placeholder="Nome da pirâmide..."
+                   class="filtro-input">
+          </div>
+        </div>
+        
+        <div class="acoes-principais">
+          <button class="btn-nova-piramide" (click)="abrirModalNova()">
+            ➕ Nova Pirâmide
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de Pirâmides -->
+      <div class="piramides-lista" *ngIf="!loading">
+        <div class="piramide-card" 
+             *ngFor="let piramide of piramidesFiltradas"
+             [class.atual]="isAtual(piramide)"
+             [style.border-left-color]="piramide.cor">
+          
+          <div class="piramide-header">
+            <div class="piramide-info">
+              <span class="piramide-icone">{{ piramide.icone }}</span>
+              <div class="piramide-detalhes">
+                <h4 class="piramide-nome">{{ piramide.nome }}</h4>
+                <div class="piramide-meta">
+                  <span class="categoria">{{ getCategoriaNome(piramide.categoria) }}</span>
+                  <span class="separador">•</span>
+                  <span class="duplas-count">{{ piramide.totalDuplas }} duplas</span>
+                  <span class="separador">•</span>
+                  <span class="ultima-atividade">{{ formatarData(piramide.ultimaAtividade) }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="piramide-status">
+              <span class="status-badge" [class]="getStatusBadgeClass(piramide.status)">
+                {{ piramide.status }}
+              </span>
+              <span class="atual-badge" *ngIf="isAtual(piramide)">ATUAL</span>
+            </div>
+          </div>
+          
+          <div class="piramide-acoes">
+            <button class="btn-acao selecionar" 
+                    (click)="selecionarPiramide(piramide)"
+                    [disabled]="isAtual(piramide) || piramide.status === 'arquivada'"
+                    title="Selecionar como pirâmide ativa">
+              🎯 {{ isAtual(piramide) ? 'Selecionada' : 'Selecionar' }}
+            </button>
+            
+            <button class="btn-acao estatisticas" 
+                    (click)="abrirEstatisticas(piramide)"
+                    title="Ver estatísticas">
+              📊
+            </button>
+            
+            <button class="btn-acao editar" 
+                    (click)="abrirModalEdicao(piramide)"
+                    title="Editar pirâmide">
+              ✏️
+            </button>
+            
+            <div class="dropdown-acoes">
+              <button class="btn-acao mais" title="Mais ações">⋮</button>
+              <div class="dropdown-menu">
+                <button *ngIf="piramide.status === 'ativa'" 
+                        (click)="alterarStatus(piramide, 'pausada')">
+                  ⏸️ Pausar
+                </button>
+                <button *ngIf="piramide.status === 'pausada'" 
+                        (click)="alterarStatus(piramide, 'ativa')">
+                  ▶️ Reativar
+                </button>
+                <button *ngIf="piramide.status !== 'finalizada'" 
+                        (click)="alterarStatus(piramide, 'finalizada')">
+                  🏁 Finalizar
+                </button>
+                <button *ngIf="piramide.status !== 'arquivada'" 
+                        (click)="arquivarPiramide(piramide)"
+                        class="acao-perigosa">
+                  📦 Arquivar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Mensagem quando não há pirâmides -->
+        <div class="sem-piramides" *ngIf="piramidesFiltradas.length === 0">
+          <div class="icone">🏗️</div>
+          <h4>Nenhuma pirâmide encontrada</h4>
+          <p>Crie sua primeira pirâmide ou ajuste os filtros</p>
+          <button class="btn-criar-primeira" (click)="abrirModalNova()">
+            ➕ Criar Primeira Pirâmide
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div class="loading-container" *ngIf="loading">
+        <div class="spinner"></div>
+        <p>Carregando pirâmides...</p>
+      </div>
+
+      <!-- Mensagem de feedback -->
+      <div class="alert-message" *ngIf="mensagem" [class]="tipoMensagem">
+        {{ mensagem }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nova Pirâmide -->
+<div class="modal-overlay" *ngIf="mostrarModalNova" (click)="fecharModalNova()">
+  <div class="modal-content nova-piramide" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>➕ Nova Pirâmide</h3>
+      <button class="btn-close" (click)="fecharModalNova()">×</button>
+    </div>
+    
+    <div class="modal-body">
+      <form (ngSubmit)="criarPiramide()" #novaForm="ngForm">
+        <div class="form-group">
+          <label>Nome da Pirâmide *</label>
+          <input type="text" 
+                 [(ngModel)]="novaPiramide.nome" 
+                 name="nome"
+                 placeholder="Ex: Pirâmide Masculina 2025"
+                 required
+                 class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>Descrição</label>
+          <textarea [(ngModel)]="novaPiramide.descricao" 
+                    name="descricao"
+                    placeholder="Descrição opcional da pirâmide..."
+                    class="form-control" 
+                    rows="3"></textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoria *</label>
+            <select [(ngModel)]="novaPiramide.categoria" 
+                    name="categoria"
+                    required
+                    class="form-control">
+              <option *ngFor="let cat of categorias" [value]="cat.value">
+                {{ cat.label }}
+              </option>
+            </select>
+            <small class="help-text">
+              {{ getCategoriaDescricao(novaPiramide.categoria) }}
+            </small>
+          </div>
+          
+          <div class="form-group">
+            <label>Máximo de Duplas</label>
+            <input type="number" 
+                   [(ngModel)]="novaPiramide.maxDuplas" 
+                   name="maxDuplas"
+                   min="10" 
+                   max="100"
+                   class="form-control">
+            <small class="help-text">Padrão: 45 duplas (pirâmide 9 bases)</small>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cor do Tema</label>
+            <div class="cores-grid">
+              <div class="cor-option" 
+                   *ngFor="let cor of cores"
+                   [style.background]="cor"
+                   [class.selected]="novaPiramide.cor === cor"
+                   (click)="novaPiramide.cor = cor">
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Ícone</label>
+            <div class="icones-grid">
+              <div class="icone-option" 
+                   *ngFor="let icone of icones"
+                   [class.selected]="novaPiramide.icone === icone"
+                   (click)="novaPiramide.icone = icone">
+                {{ icone }}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="preview-piramide">
+          <h4>Preview</h4>
+          <div class="piramide-preview" [style.border-left-color]="novaPiramide.cor">
+            <span class="preview-icone">{{ novaPiramide.icone }}</span>
+            <div class="preview-info">
+              <strong>{{ novaPiramide.nome || 'Nome da Pirâmide' }}</strong>
+              <span class="preview-categoria">{{ getCategoriaNome(novaPiramide.categoria) }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="alert-message" *ngIf="mensagem" [class]="tipoMensagem">
+          {{ mensagem }}
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" 
+                  class="btn-cancelar" 
+                  (click)="fecharModalNova()"
+                  [disabled]="loading">
+            Cancelar
+          </button>
+          <button type="submit" 
+                  class="btn-criar" 
+                  [disabled]="loading || !novaForm.form.valid">
+            <span *ngIf="loading">Criando...</span>
+            <span *ngIf="!loading">➕ Criar Pirâmide</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Edição -->
+<div class="modal-overlay" *ngIf="mostrarModalEdicao" (click)="fecharModalEdicao()">
+  <div class="modal-content edicao-piramide" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>✏️ Editar Pirâmide</h3>
+      <button class="btn-close" (click)="fecharModalEdicao()">×</button>
+    </div>
+    
+    <div class="modal-body">
+      <form (ngSubmit)="salvarEdicao()" #edicaoForm="ngForm">
+        <div class="form-group">
+          <label>Nome da Pirâmide *</label>
+          <input type="text" 
+                 [(ngModel)]="piramideEdicao.nome" 
+                 name="nome"
+                 required
+                 class="form-control">
+        </div>
+        
+        <div class="form-group">
+          <label>Descrição</label>
+          <textarea [(ngModel)]="piramideEdicao.descricao" 
+                    name="descricao"
+                    class="form-control" 
+                    rows="3"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>Categoria</label>
+          <select [(ngModel)]="piramideEdicao.categoria" 
+                  name="categoria"
+                  class="form-control">
+            <option *ngFor="let cat of categorias" [value]="cat.value">
+              {{ cat.label }}
+            </option>
+          </select>
+        </div>
+        
+        <div class="alert-message" *ngIf="mensagem" [class]="tipoMensagem">
+          {{ mensagem }}
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" 
+                  class="btn-cancelar" 
+                  (click)="fecharModalEdicao()"
+                  [disabled]="loading">
+            Cancelar
+          </button>
+          <button type="submit" 
+                  class="btn-salvar" 
+                  [disabled]="loading || !edicaoForm.form.valid">
+            <span *ngIf="loading">Salvando...</span>
+            <span *ngIf="!loading">💾 Salvar</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Estatísticas -->
+<div class="modal-overlay" *ngIf="mostrarModalEstatisticas" (click)="fecharModalEstatisticas()">
+  <div class="modal-content estatisticas-piramide" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>📊 Estatísticas da Pirâmide</h3>
+      <button class="btn-close" (click)="fecharModalEstatisticas()">×</button>
+    </div>
+    
+    <div class="modal-body" *ngIf="estatisticasSelecionada">
+      <div class="estatisticas-grid">
+        <div class="stat-card">
+          <div class="stat-icone">👥</div>
+          <div class="stat-info">
+            <h4>{{ estatisticasSelecionada.totalDuplas }}</h4>
+            <p>Duplas Ativas</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icone">📋</div>
+          <div class="stat-info">
+            <h4>{{ estatisticasSelecionada.vagasDisponiveis }}</h4>
+            <p>Vagas Disponíveis</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icone">⚔️</div>
+          <div class="stat-info">
+            <h4>{{ estatisticasSelecionada.totalJogos }}</h4>
+            <p>Total de Jogos</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icone">📈</div>
+          <div class="stat-info">
+            <h4>{{ estatisticasSelecionada.rotatividade }}%</h4>
+            <p>Rotatividade</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="detalhes-estatisticas">
+        <h4>📋 Detalhes</h4>
+        <ul>
+          <li><strong>Tempo médio por base:</strong> {{ estatisticasSelecionada.tempoMedioBase }} dias</li>
+          <li><strong>Última atividade:</strong> {{ formatarData(estatisticasSelecionada.ultimaAtividade) }}</li>
+          <li><strong>Status:</strong> Sistema funcionando normalmente</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

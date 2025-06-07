@@ -1,7 +1,10 @@
+// src/app/components/adicionar-dupla/adicionar-dupla.ts - CORREÇÃO PARA MÚLTIPLAS PIRÂMIDES
+
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DuplasService } from '../../services/duplas';
+import { PiramidesService } from '../../services/piramides';
 import { NovaDupla } from '../../models/dupla.model';
 
 @Component({
@@ -28,7 +31,10 @@ export class AdicionarDuplaComponent {
   mensagem = '';
   tipoMensagem: 'success' | 'error' = 'success';
 
-  constructor(private duplasService: DuplasService) {}
+  constructor(
+    private duplasService: DuplasService,
+    private piramidesService: PiramidesService
+  ) {}
 
   async onSubmit() {
     if (!this.novaDupla.jogador1 || !this.novaDupla.jogador2 || !this.novaDupla.telefone) {
@@ -42,8 +48,15 @@ export class AdicionarDuplaComponent {
       return;
     }
 
-    // Verificar capacidade da pirâmide
-    const capacidade = await this.duplasService.validarCapacidadePiramide();
+    // ✅ CORREÇÃO: Obter ID da pirâmide atual
+    const piramideAtualId = this.piramidesService.getPiramideAtualId();
+    if (!piramideAtualId) {
+      this.mostrarMensagem('Nenhuma pirâmide selecionada. Selecione uma pirâmide primeiro.', 'error');
+      return;
+    }
+
+    // Verificar capacidade da pirâmide atual
+    const capacidade = await this.duplasService.validarCapacidadePiramide(piramideAtualId);
     if (!capacidade.podeAdicionar) {
       this.mostrarMensagem(capacidade.message, 'error');
       return;
@@ -52,7 +65,8 @@ export class AdicionarDuplaComponent {
     this.loading = true;
     this.mensagem = '';
 
-    const resultado = await this.duplasService.criarDupla(this.novaDupla);
+    // ✅ CORREÇÃO: Passar o ID da pirâmide para criarDupla
+    const resultado = await this.duplasService.criarDupla(this.novaDupla, piramideAtualId);
     
     if (resultado.success) {
       this.mostrarMensagem(resultado.message, 'success');
