@@ -2,18 +2,33 @@
 
 <div class="modal-overlay" *ngIf="mostrar" (click)="fecharModal()">
   <div class="modal-content gerenciar-piramides" (click)="$event.stopPropagation()">
+    <!-- ✅ HEADER CORRIGIDO: Com botão de refresh -->
     <div class="modal-header">
       <h3>🏗️ Gerenciar Pirâmides</h3>
-      <button class="btn-close" (click)="fecharModal()">×</button>
+      <div class="header-actions">
+        <button class="btn-refresh-modal" 
+                (click)="forcarRefresh()" 
+                [disabled]="loading"
+                title="Atualizar lista de pirâmides">
+          🔄
+        </button>
+        <button class="btn-close" (click)="fecharModal()">×</button>
+      </div>
     </div>
     
     <div class="modal-body">
+      <!-- ✅ INDICADOR DE REFRESH -->
+      <div class="refresh-indicator" *ngIf="loading">
+        <div class="spinner-pequeno"></div>
+        <span>Atualizando lista de pirâmides...</span>
+      </div>
+
       <!-- Filtros e Controles -->
       <div class="controles-superiores">
         <div class="filtros">
           <div class="filtro-grupo">
             <label>Status:</label>
-            <select [(ngModel)]="filtroStatus" class="filtro-select">
+            <select [(ngModel)]="filtroStatus" class="filtro-select" (change)="aplicarFiltros()">
               <option value="todas">Todas</option>
               <option value="ativa">Ativas</option>
               <option value="pausada">Pausadas</option>
@@ -24,7 +39,7 @@
           
           <div class="filtro-grupo">
             <label>Categoria:</label>
-            <select [(ngModel)]="filtroCategoria" class="filtro-select">
+            <select [(ngModel)]="filtroCategoria" class="filtro-select" (change)="aplicarFiltros()">
               <option value="todas">Todas</option>
               <option *ngFor="let cat of categorias" [value]="cat.value">{{ cat.label }}</option>
             </select>
@@ -34,6 +49,7 @@
             <label>Buscar:</label>
             <input type="text" 
                    [(ngModel)]="termoBusca" 
+                   (input)="aplicarFiltros()"
                    placeholder="Nome da pirâmide..."
                    class="filtro-input">
           </div>
@@ -46,10 +62,15 @@
         </div>
       </div>
 
+      <!-- ✅ CONTADOR DE PIRÂMIDES -->
+      <div class="contador-piramides" *ngIf="!loading">
+        <p>📊 Total: {{ piramides.length }} pirâmide(s) | Exibindo: {{ piramidesFiltradas.length }}</p>
+      </div>
+
       <!-- Lista de Pirâmides -->
       <div class="piramides-lista" *ngIf="!loading">
         <div class="piramide-card" 
-             *ngFor="let piramide of piramidesFiltradas"
+             *ngFor="let piramide of piramidesFiltradas; trackBy: trackByPiramideId"
              [class.atual]="isAtual(piramide)"
              [class.finalizada]="piramide.status === 'finalizada'"
              [class.pausada]="piramide.status === 'pausada'"
@@ -79,7 +100,7 @@
             </div>
           </div>
           
-          <!-- ✅ AÇÕES ATUALIZADAS COM NOVAS FUNCIONALIDADES -->
+          <!-- ✅ AÇÕES ATUALIZADAS COM REFRESH AUTOMÁTICO -->
           <div class="piramide-acoes">
             <button class="btn-acao selecionar" 
                     (click)="selecionarPiramide(piramide)"
@@ -154,21 +175,31 @@
           </div>
         </div>
         
-        <!-- Mensagem quando não há pirâmides -->
-        <div class="sem-piramides" *ngIf="piramidesFiltradas.length === 0">
+        <!-- ✅ MENSAGEM MELHORADA quando não há pirâmides -->
+        <div class="sem-piramides" *ngIf="piramidesFiltradas.length === 0 && piramides.length === 0">
           <div class="icone">🏗️</div>
           <h4>Nenhuma pirâmide encontrada</h4>
-          <p>Crie sua primeira pirâmide ou ajuste os filtros</p>
+          <p>Ainda não há pirâmides criadas no sistema</p>
           <button class="btn-criar-primeira" (click)="abrirModalNova()">
             ➕ Criar Primeira Pirâmide
           </button>
         </div>
+
+        <!-- ✅ MENSAGEM quando filtro não retorna resultados -->
+        <div class="sem-piramides" *ngIf="piramidesFiltradas.length === 0 && piramides.length > 0">
+          <div class="icone">🔍</div>
+          <h4>Nenhuma pirâmide encontrada</h4>
+          <p>Nenhuma pirâmide corresponde aos filtros aplicados</p>
+          <button class="btn-limpar-filtros" (click)="limparFiltros()">
+            🗑️ Limpar Filtros
+          </button>
+        </div>
       </div>
 
-      <!-- Loading -->
+      <!-- ✅ LOADING MELHORADO -->
       <div class="loading-container" *ngIf="loading">
         <div class="spinner"></div>
-        <p>Carregando pirâmides...</p>
+        <p>{{ loadingMessage || 'Carregando pirâmides...' }}</p>
       </div>
 
       <!-- Mensagem de feedback -->
@@ -179,7 +210,7 @@
   </div>
 </div>
 
-<!-- ✅ NOVO MODAL: Confirmação de exclusão -->
+<!-- ✅ MODAL DE CONFIRMAÇÃO DE EXCLUSÃO (mantido igual) -->
 <div class="modal-overlay" *ngIf="mostrarModalConfirmacaoExclusao" (click)="fecharModalConfirmacaoExclusao()">
   <div class="modal-content confirmacao-exclusao" (click)="$event.stopPropagation()">
     <div class="modal-header perigo">

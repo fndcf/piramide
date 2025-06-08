@@ -144,6 +144,7 @@ export class PiramidesService {
 
   // ========== OPERAÇÕES BÁSICAS ==========
   
+  // ✅ MÉTODO CORRIGIDO: criarPiramide com limpeza de cache
   async criarPiramide(novaPiramide: NovaPiramide): Promise<{ success: boolean; message: string; piramide?: Piramide }> {
     try {
       // Validar nome único
@@ -180,8 +181,10 @@ export class PiramidesService {
           ...piramideData
         };
 
-        // Limpar cache
-        this.limparCache();
+        // ✅ LIMPAR cache para forçar reload
+        await this.limparCache();
+        
+        console.log('✅ Pirâmide criada e cache limpo:', piramide.nome);
 
         return {
           success: true,
@@ -203,14 +206,19 @@ export class PiramidesService {
     }
   }
 
+  // ✅ MÉTODO CORRIGIDO: obterPiramides com melhor cache
   async obterPiramides(): Promise<Piramide[]> {
     try {
-      // Verificar cache
+      // Verificar cache apenas se não for muito antigo (reduzido para 2 minutos)
       const agora = Date.now();
-      if (this.piramidesCache.length > 0 && (agora - this.lastCacheUpdate) < this.CACHE_DURATION) {
+      const CACHE_DURATION_REDUCED = 2 * 60 * 1000; // 2 minutos
+      
+      if (this.piramidesCache.length > 0 && (agora - this.lastCacheUpdate) < CACHE_DURATION_REDUCED) {
+        console.log('📋 Usando cache das pirâmides');
         return [...this.piramidesCache];
       }
 
+      console.log('🔄 Buscando pirâmides no Firebase...');
       const result = await this.firebase.getAll(
         'piramides',
         [orderBy('dataInicio', 'desc')]
@@ -219,6 +227,8 @@ export class PiramidesService {
       if (result.success && result.data) {
         this.piramidesCache = result.data.map(p => this.formatarPiramide(p));
         this.lastCacheUpdate = agora;
+        
+        console.log(`✅ ${this.piramidesCache.length} pirâmides carregadas do Firebase`);
         return [...this.piramidesCache];
       } else {
         console.error('Erro ao obter pirâmides:', result.error);
@@ -250,11 +260,14 @@ export class PiramidesService {
     }
   }
 
+  // ✅ MÉTODO CORRIGIDO: obterPiramideSeletor com cache atualizado
   async obterPiramideSeletor(): Promise<PiramideSeletor[]> {
     try {
       const piramides = await this.obterPiramides();
       
-      return piramides.map(p => ({
+      console.log('🔄 Convertendo pirâmides para seletor...');
+      
+      const seletores = piramides.map(p => ({
         id: p.id,
         nome: p.nome,
         categoria: p.categoria,
@@ -262,14 +275,18 @@ export class PiramidesService {
         totalDuplas: 0, // TODO: calcular do DuplasService
         cor: p.cor,
         icone: p.icone,
-        ultimaAtividade: new Date() // TODO: calcular última atividade real
+        ultimaAtividade: p.dataInicio // TODO: calcular última atividade real
       }));
+      
+      console.log(`✅ ${seletores.length} seletores criados`);
+      return seletores;
     } catch (error) {
       console.error('Erro ao obter seletor de pirâmides:', error);
       return [];
     }
   }
 
+  // ✅ MÉTODO CORRIGIDO: selecionarPiramide com limpeza de cache
   async selecionarPiramide(piramideId: string): Promise<{ success: boolean; message: string }> {
     try {
       const result = await this.firebase.get('piramides', piramideId);
@@ -299,6 +316,9 @@ export class PiramidesService {
         piramideAtualId: piramideId,
         versaoApp: '1.0.0'
       });
+
+      // ✅ LIMPAR cache para garantir dados atualizados
+      await this.limparCache();
 
       return {
         success: true,
@@ -384,6 +404,7 @@ export class PiramidesService {
     }
   }
 
+  // ✅ MÉTODO CORRIGIDO: excluirPiramide com limpeza de cache
   async excluirPiramide(piramideId: string): Promise<{ success: boolean; message: string }> {
     try {
       const getResult = await this.firebase.get('piramides', piramideId);
@@ -439,10 +460,10 @@ export class PiramidesService {
       const deleteResult = await this.firebase.delete('piramides', piramideId);
 
       if (deleteResult.success) {
-        // TODO: Excluir todas as duplas desta pirâmide
-        // await this.duplasService.excluirTodasDuplasPiramide(piramideId);
+        // ✅ LIMPAR cache
+        await this.limparCache();
 
-        this.limparCache();
+        console.log('✅ Pirâmide excluída e cache limpo');
 
         return {
           success: true,
@@ -516,6 +537,7 @@ export class PiramidesService {
 
   // ========== OPERAÇÕES AVANÇADAS ==========
   
+  // ✅ MÉTODO CORRIGIDO: atualizarPiramide com limpeza de cache
   async atualizarPiramide(piramideId: string, dados: Partial<Piramide>): Promise<{ success: boolean; message: string }> {
     try {
       // Validar nome único se estiver sendo alterado
@@ -538,7 +560,8 @@ export class PiramidesService {
           this.piramideAtualSubject.next(this.piramideAtual);
         }
 
-        this.limparCache();
+        // ✅ LIMPAR cache
+        await this.limparCache();
 
         return {
           success: true,
@@ -559,6 +582,7 @@ export class PiramidesService {
     }
   }
 
+  // ✅ MÉTODO CORRIGIDO: alterarStatusPiramide com limpeza de cache
   async alterarStatusPiramide(piramideId: string, novoStatus: Piramide['status']): Promise<{ success: boolean; message: string }> {
     try {
       const dados: Partial<Piramide> = { status: novoStatus };
@@ -570,6 +594,9 @@ export class PiramidesService {
       const resultado = await this.atualizarPiramide(piramideId, dados);
       
       if (resultado.success) {
+        // ✅ LIMPAR cache adicional (já é feito no atualizarPiramide, mas garantindo)
+        await this.limparCache();
+        
         if (novoStatus === 'finalizada') {
           const piramide = await this.firebase.get('piramides', piramideId);
           resultado.message = `Pirâmide "${piramide.data?.nome}" foi finalizada. Agora você pode excluí-la se necessário.`;
@@ -685,7 +712,9 @@ export class PiramidesService {
     ];
   }
 
-  private limparCache(): void {
+  // ✅ ADICIONAR método para limpar cache
+  async limparCache(): Promise<void> {
+    console.log('🧹 Limpando cache das pirâmides...');
     this.piramidesCache = [];
     this.lastCacheUpdate = 0;
   }

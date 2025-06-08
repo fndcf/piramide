@@ -1,4 +1,4 @@
-<!-- src/app/components/seletor-piramide/seletor-piramide.html -->
+<!-- src/app/components/seletor-piramide/seletor-piramide.html - ATUALIZADO -->
 
 <div class="seletor-piramide-container">
   <div class="seletor-header">
@@ -29,6 +29,20 @@
       </div>
     </div>
 
+    <!-- ✅ NOVA: Mensagem quando não há pirâmide selecionada -->
+    <div class="sem-piramide-info" *ngIf="!piramideAtual && !carregando">
+      <span class="icone-vazio">🏗️</span>
+      <div class="detalhes-vazio">
+        <span class="nome-vazio">Nenhuma pirâmide selecionada</span>
+        <div class="meta-vazio">
+          <span>Clique para escolher uma pirâmide</span>
+        </div>
+      </div>
+      <div class="seta-dropdown">
+        <span [class.rotacionada]="mostrarDropdown">▼</span>
+      </div>
+    </div>
+
     <div class="carregando-info" *ngIf="carregando">
       <div class="spinner-pequeno"></div>
       <span>Carregando pirâmides...</span>
@@ -37,14 +51,29 @@
 
   <!-- Dropdown de Pirâmides -->
   <div class="dropdown-piramides" *ngIf="mostrarDropdown" (click)="$event.stopPropagation()">
+    <!-- ✅ HEADER CORRIGIDO: Com botão de refresh -->
     <div class="dropdown-header">
       <span>Pirâmides Disponíveis</span>
-      <button class="btn-fechar-dropdown" (click)="fecharDropdown()">×</button>
+      <div class="header-actions">
+        <button class="btn-refresh-seletor" 
+                (click)="refreshPiramides()" 
+                [disabled]="carregando"
+                title="Atualizar lista de pirâmides">
+          🔄
+        </button>
+        <button class="btn-fechar-dropdown" (click)="fecharDropdown()">×</button>
+      </div>
     </div>
 
-    <div class="piramides-lista">
+    <!-- ✅ INDICADOR de carregamento no dropdown -->
+    <div class="dropdown-loading" *ngIf="carregando">
+      <div class="spinner-pequeno"></div>
+      <span>Atualizando lista...</span>
+    </div>
+
+    <div class="piramides-lista" *ngIf="!carregando">
       <div class="piramide-opcao" 
-           *ngFor="let piramide of piramides"
+           *ngFor="let piramide of piramides; trackBy: trackByPiramideId"
            [class.atual]="piramide.id === piramideAtual?.id"
            (click)="selecionarPiramide(piramide)">
         
@@ -68,10 +97,14 @@
         </div>
       </div>
 
-      <!-- Mensagem quando não há pirâmides -->
-      <div class="sem-piramides" *ngIf="piramides.length === 0 && !carregando">
+      <!-- ✅ MENSAGEM MELHORADA quando não há pirâmides -->
+      <div class="sem-piramides" *ngIf="piramides.length === 0">
         <span class="icone-vazio">🏗️</span>
-        <p>Nenhuma pirâmide disponível no momento</p>
+        <div class="sem-piramides-content">
+          <h4>Nenhuma pirâmide disponível</h4>
+          <p>Ainda não há pirâmides ativas no sistema</p>
+          <small>Faça login como administrador para criar pirâmides</small>
+        </div>
       </div>
     </div>
   </div>

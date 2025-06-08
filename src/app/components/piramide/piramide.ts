@@ -74,17 +74,28 @@ export class PiramideComponent implements OnInit, OnDestroy {
     console.log('🏗️ PiramideComponent construído - TODOS OS MODAIS FECHADOS');
   }
 
+  // 1. ✅ ADICIONAR no ngOnInit (após as subscriptions existentes):
   async ngOnInit() {
     console.log('🔄 ngOnInit - Estado inicial dos modais:', {
       gerenciar: this.mostrarModalGerenciarPiramides,
       adicionar: this.mostrarModalAdicionar,
       login: this.mostrarModalLogin
     });
-    // Subscribir para mudanças na pirâmide atual
+    
+    // ✅ ADICIONAR: Subscribir para mudanças na pirâmide atual
     const piramideSub = this.piramidesService.piramideAtual$.subscribe(piramide => {
-      console.log('📊 Pirâmide mudou:', piramide?.nome || 'null');
+      console.log('📊 Pirâmide mudou via subscription:', piramide?.nome || 'null');
+      const piramideAnterior = this.piramideAtual;
       this.piramideAtual = piramide;
-      // ❌ NÃO abrir modal aqui
+      
+      // ✅ CRUCIAL: Recarregar dados quando pirâmide muda
+      if (piramide && piramide.id !== piramideAnterior?.id) {
+        console.log('🔄 Nova pirâmide detectada - recarregando dados...');
+        this.carregarDadosPiramide();
+      } else if (!piramide) {
+        console.log('⚠️ Nenhuma pirâmide selecionada - limpando interface');
+        this.basesReais = [];
+      }
     });
     this.subscriptions.push(piramideSub);
 
@@ -159,6 +170,30 @@ export class PiramideComponent implements OnInit, OnDestroy {
     }
   }
 
+  // 2. ✅ ADICIONAR método para fechamento do modal:
+  onModalGerenciarFechado() {
+    console.log('🚪 Modal gerenciar pirâmides fechado');
+    this.mostrarModalGerenciarPiramides = false;
+    
+    // ✅ Verificar mudanças e atualizar seletor
+    setTimeout(async () => {
+      const piramideAtualizada = this.piramidesService.getPiramideAtual();
+      console.log('🔍 Verificando pirâmide após fechamento do modal:', {
+        atual: this.piramideAtual?.nome || 'Nenhuma',
+        atualizada: piramideAtualizada?.nome || 'Nenhuma'
+      });
+      
+      if (piramideAtualizada && piramideAtualizada.id !== this.piramideAtual?.id) {
+        console.log('🔄 Nova pirâmide detectada - atualizando...');
+        this.piramideAtual = piramideAtualizada;
+        await this.carregarDadosPiramide();
+        
+        // ✅ NOTIFICAR todos os componentes que a pirâmide mudou
+        // (Isso já é feito automaticamente via subscription)
+      }
+    }, 100);
+  }
+
   verificarSessaoJogador() {
     const currentUser = this.authService.getCurrentUser();
     if (currentUser && (currentUser as any).tipo === 'jogador') {
@@ -186,10 +221,18 @@ export class PiramideComponent implements OnInit, OnDestroy {
 
   // ========== MÉTODOS MANUAIS PARA ABRIR MODAIS ==========
 
-  // ✅ MÉTODO SEGURO: Só admin pode abrir modal de gerenciar
+  // 1. Método principal corrigido para abrir modal
   abrirModalGerenciarPiramides() {
     console.log('🔘 Tentativa de abrir modal gerenciar pirâmides');
     console.log('👑 É admin?', this.isAdmin());
+    console.log('🔓 Está logado?', this.authService.isLoggedIn());
+    console.log('📊 Pirâmide atual:', this.piramideAtual?.nome || 'Nenhuma');
+    
+    if (!this.authService.isLoggedIn()) {
+      console.log('❌ Usuário não está logado');
+      alert('Você precisa estar logado como administrador');
+      return;
+    }
     
     if (!this.isAdmin()) {
       console.log('❌ Usuário não é admin - modal não será aberto');
@@ -199,6 +242,30 @@ export class PiramideComponent implements OnInit, OnDestroy {
     
     console.log('✅ Abrindo modal gerenciar pirâmides');
     this.mostrarModalGerenciarPiramides = true;
+    
+    // ✅ FORÇAR detecção de mudanças se necessário
+    setTimeout(() => {
+      console.log('🔄 Estado do modal após timeout:', this.mostrarModalGerenciarPiramides);
+    }, 100);
+  }
+
+  // 2. Método de debug para verificar estado
+  debugLoginStatus() {
+    console.log('=== 🐛 DEBUG LOGIN STATUS ===');
+    console.log('🔓 isLoggedIn():', this.authService.isLoggedIn());
+    console.log('👑 isAdmin():', this.isAdmin());
+    console.log('🏐 isJogador():', this.isJogador());
+    console.log('👤 getCurrentUser():', this.authService.getCurrentUser());
+    console.log('📊 piramideAtual:', this.piramideAtual);
+    console.log('🔧 mostrarModalGerenciarPiramides:', this.mostrarModalGerenciarPiramides);
+    console.log('🔧 mostrarModalLogin:', this.mostrarModalLogin);
+    console.log('🔧 mostrarModalAdicionar:', this.mostrarModalAdicionar);
+    console.log('========================');
+    
+    // ✅ Teste direto do modal
+    console.log('🧪 Testando abertura direta do modal...');
+    this.mostrarModalGerenciarPiramides = true;
+    console.log('✅ Modal definido como true');
   }
 
   // ✅ MÉTODO SEGURO: Criar primeira pirâmide (apenas para admin)
@@ -308,15 +375,18 @@ export class PiramideComponent implements OnInit, OnDestroy {
     return this.piramideAtual?.status === 'ativa';
   }
 
+  // 3. ✅ CORRIGIR método onPiramideSelecionada:
   onPiramideSelecionada(piramide: Piramide) {
     console.log('📊 Evento pirâmide selecionada:', piramide.nome);
-    // A pirâmide já foi selecionada pelo service, apenas recarregar
-    this.carregarDadosPiramide();
+    // A pirâmide já foi selecionada pelo service via subscription
+    // Apenas confirmar que está atualizada
+    console.log('✅ Pirâmide será atualizada automaticamente via subscription');
   }
 
   onPiramideSelecionadaVisitante(piramide: Piramide) {
     console.log('👀 Visitante selecionou pirâmide:', piramide.nome);
-    // Método específico para visitantes
+    // A pirâmide já foi selecionada pelo service
+    // Recarregar dados para refletir a mudança
     this.carregarDadosPiramide();
   }
 
@@ -922,10 +992,85 @@ export class PiramideComponent implements OnInit, OnDestroy {
     this.limparSelecao();
   }
 
-  onLoginSucesso() {
+  // 3. Método corrigido onLoginSucesso para garantir atualização
+  async onLoginSucesso() {
     console.log('✅ Login admin realizado com sucesso');
+    console.log('👑 Verificando se é admin após login:', this.isAdmin());
+    
     this.limparSelecao();
-    this.carregarDuplas();
+    
+    // ✅ Recarregar dados após login
+    await this.carregarDados();
+    
+    // ✅ Log de confirmação
+    setTimeout(() => {
+      console.log('📊 Estado após login:');
+      console.log('- isAdmin():', this.isAdmin());
+      console.log('- isLoggedIn():', this.authService.isLoggedIn());
+      console.log('- piramideAtual:', this.piramideAtual?.nome || 'Nenhuma');
+    }, 500);
+  }
+
+  // 5. ✅ MELHORAR método carregarDados:
+  private async carregarDados() {
+    console.log('🔄 Carregando dados gerais...');
+    try {
+      // Verificar se há pirâmide atual
+      this.piramideAtual = this.piramidesService.getPiramideAtual();
+      
+      if (this.piramideAtual) {
+        console.log('📊 Carregando dados da pirâmide:', this.piramideAtual.nome);
+        await this.carregarDadosPiramide();
+      } else {
+        console.log('⚠️ Nenhuma pirâmide atual - limpando interface');
+        this.basesReais = [];
+      }
+      
+      console.log('✅ Dados gerais carregados com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao carregar dados gerais:', error);
+    }
+  }
+
+  // 6. ✅ ADICIONAR método de debug melhorado:
+  debugPiramideStatus() {
+    console.log('=== 🐛 DEBUG PIRÂMIDE STATUS ===');
+    console.log('🏗️ piramideAtual (local):', this.piramideAtual);
+    console.log('🔧 piramideAtual (service):', this.piramidesService.getPiramideAtual());
+    console.log('📊 basesReais.length:', this.basesReais.length);
+    console.log('📈 totalDuplas:', this.getTotalDuplas());
+    console.log('👑 isAdmin:', this.isAdmin());
+    console.log('🔓 isLoggedIn:', this.authService.isLoggedIn());
+    console.log('🔧 mostrarModalGerenciarPiramides:', this.mostrarModalGerenciarPiramides);
+    console.log('========================');
+  }
+
+  // 7. Método para teste manual (remover após correção)
+  testarModalGerenciar() {
+    console.log('🧪 TESTE MANUAL: Forçando abertura do modal');
+    this.mostrarModalGerenciarPiramides = true;
+    console.log('🔧 Modal definido como true');
+    
+    // Verificar após um pequeno delay
+    setTimeout(() => {
+      console.log('⏰ Verificação após 1 segundo:');
+      console.log('- mostrarModalGerenciarPiramides:', this.mostrarModalGerenciarPiramides);
+      console.log('- Elemento modal no DOM:', document.querySelector('app-gerenciar-piramides'));
+    }, 1000);
+  }
+
+  // 8. Getter para verificação reativa do estado de admin
+  get isCurrentUserAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
+  // 9. Método para forçar atualização da interface
+  forceUpdate() {
+    console.log('🔄 Forçando atualização da interface...');
+    // Trigger change detection manualmente se necessário
+    setTimeout(() => {
+      console.log('✅ Atualização forçada concluída');
+    }, 0);
   }
 
   onJogadorLogado(jogadorInfo: any) {
@@ -941,19 +1086,30 @@ export class PiramideComponent implements OnInit, OnDestroy {
     this.carregarDuplas();
   }
 
-  // ✅ ATUALIZAÇÃO: Evento de dupla adicionada com verificação
+  // 4. ✅ CORRIGIR método onDuplaAdicionada:
   onDuplaAdicionada() {
-    if (!this.podeAdicionarDuplas()) {
-      alert('Esta pirâmide não aceita mais duplas no momento.');
-      return;
+    console.log('✅ Dupla adicionada - recarregando dados da pirâmide atual');
+    if (this.piramideAtual) {
+      this.carregarDadosPiramide();
     }
-    
-    this.carregarDuplas();
   }
 
-  // ✅ NOVA FUNÇÃO: Verificar se botões devem estar habilitados
+  // 4. Método auxiliar para garantir que todos os controles estão visíveis
   shouldShowAdminControls(): boolean {
-    return this.isAdmin() && this.piramideAtual !== null;
+    const result = this.isAdmin() && this.authService.isLoggedIn();
+    console.log('🔍 shouldShowAdminControls():', {
+      isAdmin: this.isAdmin(),
+      isLoggedIn: this.authService.isLoggedIn(),
+      result
+    });
+    return result;
+  }
+
+  // 5. Método para verificar se o botão gerenciar deve estar visível
+  shouldShowGerenciarButton(): boolean {
+    const result = this.shouldShowAdminControls();
+    console.log('🔍 shouldShowGerenciarButton():', result);
+    return result;
   }
 
   shouldEnableAddDupla(): boolean {

@@ -10,7 +10,7 @@
       </app-seletor-piramide>
     </div>
     
-    <!-- ✅ ATUALIZADO: Informações da pirâmide atual para usuários logados -->
+    <!-- ✅ CORRIGIDO: Informações da pirâmide atual para usuários logados -->
     <div *ngIf="authService.isLoggedIn() && piramideAtual" class="piramide-info-logado">
       <div class="piramide-atual-card" [style.border-left-color]="getCorPiramideAtual()">
         <span class="piramide-icone" [style.color]="getCorPiramideAtual()">
@@ -20,11 +20,24 @@
           <h3>{{ getNomePiramideAtual() }}</h3>
           <span class="piramide-status">{{ getStatusPiramideAtual() }}</span>
         </div>
+        <!-- ✅ CORRIGIDO: Botão sempre visível para admin -->
         <button *ngIf="isAdmin()" 
                 class="btn-trocar-piramide"
-                (click)="mostrarModalGerenciarPiramides = true"
+                (click)="abrirModalGerenciarPiramides()"
                 title="Gerenciar Pirâmides">
           🏗️ Gerenciar
+        </button>
+      </div>
+    </div>
+
+    <!-- ✅ NOVO: Botão destacado para admin sem pirâmide -->
+    <div *ngIf="authService.isLoggedIn() && isAdmin() && !piramideAtual" class="admin-sem-piramide">
+      <div class="alerta-sem-piramide">
+        <h4>🏗️ Nenhuma pirâmide selecionada</h4>
+        <p>Como administrador, você pode gerenciar e criar pirâmides</p>
+        <button class="btn-gerenciar-destacado" 
+                (click)="abrirModalGerenciarPiramides()">
+          🏗️ Gerenciar Pirâmides
         </button>
       </div>
     </div>
@@ -77,8 +90,13 @@
           </div>
         </div>
         
-        <!-- Controles de Admin -->
+        <!-- ✅ CORRIGIDO: Controles de Admin com botão adicional -->
         <div class="admin-controls" *ngIf="isAdmin()">
+          <!-- ✅ BOTÃO DE DEBUG TEMPORÁRIO -->
+          <button class="btn-admin btn-debug" (click)="debugLoginStatus()">
+            🐛 Debug
+          </button>
+          
           <button class="btn-admin" (click)="mostrarModalAdicionar = true">
             ➕ Adicionar Dupla
           </button>
@@ -88,12 +106,45 @@
           <button class="btn-admin btn-config" (click)="mostrarModalConfig = true">
             ⚙️ Configurações
           </button>
+          
+          <!-- ✅ NOVO: Botão sempre visível nos controles de admin -->
+          <button class="btn-admin btn-gerenciar" (click)="abrirModalGerenciarPiramides()">
+            🏗️ Gerenciar Pirâmides
+          </button>
         </div>
       </div>
     </div>
   </div>
   
-  <div class="piramide" *ngIf="!carregando">
+  <!-- ✅ NOVO: Estado quando não há pirâmides (apenas para visitantes e jogadores) -->
+  <div *ngIf="!carregando && !piramideAtual && !isAdmin()" class="sem-piramides-container">
+    <div class="sem-piramides-content">
+      <div class="icone-vazio">🏗️</div>
+      <h3>Nenhuma pirâmide disponível</h3>
+      <p class="descricao">No momento não há pirâmides ativas para visualizar.</p>
+      
+      <div class="visitante-info" *ngIf="!authService.isLoggedIn()">
+        <p class="info-text">Faça login para acessar mais funcionalidades</p>
+        <div class="acoes-visitante">
+          <button class="btn-login-admin" (click)="mostrarModalLogin = true">
+            👑 Login Administrador
+          </button>
+          <button class="btn-login-jogador" (click)="mostrarModalJogador = true">
+            🏐 Login Jogador
+          </button>
+        </div>
+      </div>
+      
+      <div class="jogador-info" *ngIf="isJogador()">
+        <p class="info-text">Sua dupla não está associada a nenhuma pirâmide ativa no momento.</p>
+        <button class="btn-logout-jogador" (click)="logout()">
+          Sair
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <div class="piramide" *ngIf="!carregando && piramideAtual">
     <div *ngFor="let base of basesReais; let i = index" 
          class="nivel" 
          [attr.data-nivel]="i + 1">
@@ -325,8 +376,9 @@
   (duplaAdicionada)="onDuplaAdicionada()">
 </app-adicionar-dupla>
 
+<!-- ✅ CORRIGIDO: Modal de gerenciar pirâmides -->
 <app-gerenciar-piramides 
   [mostrar]="mostrarModalGerenciarPiramides"
-  (fechar)="mostrarModalGerenciarPiramides = false"
+  (fechar)="onModalGerenciarFechado()"
   (piramideSelecionada)="onPiramideSelecionada($event)">
 </app-gerenciar-piramides>

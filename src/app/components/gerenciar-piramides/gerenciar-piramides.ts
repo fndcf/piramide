@@ -1,6 +1,6 @@
 // src/app/components/gerenciar-piramides/gerenciar-piramides.ts - ATUALIZADO
 
-import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PiramidesService } from '../../services/piramides';
@@ -24,6 +24,7 @@ export class GerenciarPiramidesComponent implements OnInit {
   loading = false;
   mensagem = '';
   tipoMensagem: 'success' | 'error' | 'info' = 'info';
+  loadingMessage = '';
   
   // Modal de nova pirâmide
   mostrarModalNova = false;
@@ -63,20 +64,56 @@ export class GerenciarPiramidesComponent implements OnInit {
   }
 
   async ngOnInit() {
-    if (this.mostrar) {
-      await this.carregarDados();
+    console.log('🏗️ GerenciarPiramidesComponent iniciado');
+    await this.carregarDados();
+  }
+
+  // ✅ MÉTODO CORRIGIDO: ngOnChanges para detectar abertura do modal
+  async ngOnChanges(changes: SimpleChanges) {
+    console.log('🔄 GerenciarPiramidesComponent - mudanças detectadas:', changes);
+    
+    // ✅ Recarregar sempre que o modal for aberto
+    if (changes['mostrar'] && changes['mostrar'].currentValue === true) {
+      console.log('✅ Modal aberto - recarregando dados...');
+      await this.carregarDados(true);
     }
   }
 
-  async carregarDados() {
+  // ✅ MÉTODO MELHORADO: carregarDados com force refresh
+  async carregarDados(forceRefresh = false) {
     this.loading = true;
+    this.mensagem = '';
+    this.loadingMessage = forceRefresh ? 'Atualizando lista...' : 'Carregando pirâmides...';
+    
     try {
+      console.log('📊 Carregando dados das pirâmides...', { forceRefresh });
+      
+      // ✅ FORÇAR refresh do service (limpar cache)
+      if (forceRefresh) {
+        await this.piramidesService.limparCache();
+      }
+      
+      // Carregar pirâmides
       this.piramides = await this.piramidesService.obterPiramideSeletor();
+      console.log(`✅ ${this.piramides.length} pirâmide(s) carregada(s)`);
+      
+      // Atualizar pirâmide atual
       this.piramideAtual = this.piramidesService.getPiramideAtual();
+      console.log('📋 Pirâmide atual:', this.piramideAtual?.nome || 'Nenhuma');
+      
     } catch (error) {
+      console.error('❌ Erro ao carregar pirâmides:', error);
       this.mostrarMensagem('Erro ao carregar pirâmides', 'error');
     }
+    
     this.loading = false;
+    this.loadingMessage = '';
+  }
+
+  // ✅ NOVO: Método para forçar refresh manual
+  async forcarRefresh() {
+    console.log('🔄 Refresh manual solicitado');
+    await this.carregarDados(true);
   }
 
   // ========== FILTROS E BUSCA ==========
@@ -107,23 +144,30 @@ export class GerenciarPiramidesComponent implements OnInit {
 
   // ========== SELEÇÃO DE PIRÂMIDE ==========
   
+  // ✅ MÉTODO CORRIGIDO: selecionarPiramide com refresh
   async selecionarPiramide(piramide: PiramideSeletor) {
     if (piramide.id === this.piramideAtual?.id) {
       return; // Já é a atual
     }
     
     this.loading = true;
+    this.loadingMessage = 'Selecionando pirâmide...';
+    
     const resultado = await this.piramidesService.selecionarPiramide(piramide.id);
     
     if (resultado.success) {
       this.piramideAtual = this.piramidesService.getPiramideAtual();
       this.mostrarMensagem(resultado.message, 'success');
       this.piramideSelecionada.emit(this.piramideAtual!);
+      
+      // ✅ RECARREGAR dados após seleção para atualizar estado
+      await this.carregarDados(true);
     } else {
       this.mostrarMensagem(resultado.message, 'error');
     }
     
     this.loading = false;
+    this.loadingMessage = '';
   }
 
   // ========== NOVA PIRÂMIDE ==========
@@ -145,24 +189,100 @@ export class GerenciarPiramidesComponent implements OnInit {
     this.mensagem = '';
   }
 
+  // ✅ MÉTODO CORRIGIDO: criarPiramide com refresh automático
   async criarPiramide() {
     if (!this.validarNovaPiramide()) {
       return;
     }
 
     this.loading = true;
+    this.loadingMessage = 'Criando pirâmide...';
+    console.log('🏗️ Criando nova pirâmide:', this.novaPiramide.nome);
+    
     const resultado = await this.piramidesService.criarPiramide(this.novaPiramide);
     
     if (resultado.success) {
       this.mostrarMensagem(resultado.message, 'success');
-      await this.carregarDados();
+      
+      // ✅ RECARREGAR dados após criação
+      console.log('🔄 Recarregando dados após criação...');
+      await this.carregarDados(true);
+      
       this.fecharModalNova();
+      
+      // ✅ SELEÇÃO AUTOMÁTICA CORRIGIDA
+      if (resultado.piramide) {
+        const piramideAtual = this.piramidesService.getPiramideAtual();
+        console.log('🔍 Estado após criação:', {
+          piramideCriada: resultado.piramide.nome,
+          piramideAtual: piramideAtual?.nome || 'Nenhuma',
+          totalPiramides: this.piramides.length
+        });
+        
+        // Selecionar automaticamente se:
+        // 1. Não há pirâmide atual OU
+        // 2. É a primeira pirâmide criada
+        const deveSelecionar = !piramideAtual || this.piramides.length === 1;
+        
+        if (deveSelecionar) {
+          console.log('🎯 Selecionando nova pirâmide automaticamente...');
+          
+          try {
+            // Usar o serviço diretamente para selecionar
+            const selecaoResult = await this.piramidesService.selecionarPiramide(resultado.piramide.id);
+            
+            if (selecaoResult.success) {
+              console.log('✅ Pirâmide selecionada automaticamente');
+              
+              // ✅ ATUALIZAR estado local
+              this.piramideAtual = this.piramidesService.getPiramideAtual();
+              
+              // ✅ EMITIR evento para o componente pai
+              if (this.piramideAtual) {
+                console.log('📡 Emitindo evento de pirâmide selecionada');
+                this.piramideSelecionada.emit(this.piramideAtual);
+              }
+              
+              // ✅ RECARREGAR dados para refletir a seleção
+              await this.carregarDados(true);
+              
+              // ✅ FECHAR modal após seleção automática
+              setTimeout(() => {
+                console.log('🚪 Fechando modal após seleção automática');
+                this.fecharModal();
+              }, 1500);
+              
+            } else {
+              console.error('❌ Erro ao selecionar pirâmide automaticamente:', selecaoResult.message);
+            }
+          } catch (error) {
+            console.error('❌ Erro na seleção automática:', error);
+          }
+        } else {
+          console.log('ℹ️ Pirâmide criada mas não selecionada automaticamente (já existe pirâmide atual)');
+        }
+      }
     } else {
       this.mostrarMensagem(resultado.message, 'error');
     }
     
     this.loading = false;
+    this.loadingMessage = '';
   }
+
+// ✅ ADICIONAR este método auxiliar na classe (opcional - para uso futuro):
+private converterParaSeletor(piramide: Piramide): PiramideSeletor {
+  return {
+    id: piramide.id,
+    nome: piramide.nome,
+    categoria: piramide.categoria,
+    status: piramide.status,
+    totalDuplas: 0,
+    cor: piramide.cor,
+    icone: piramide.icone,
+    ultimaAtividade: piramide.dataInicio
+  };
+}
 
   fecharModalNova() {
     this.mostrarModalNova = false;
@@ -212,6 +332,7 @@ export class GerenciarPiramidesComponent implements OnInit {
     this.mensagem = '';
   }
 
+  // ✅ MÉTODO CORRIGIDO: salvarEdicao com refresh
   async salvarEdicao() {
     if (!this.piramideEdicao.nome?.trim()) {
       this.mostrarMensagem('Nome é obrigatório', 'error');
@@ -219,6 +340,8 @@ export class GerenciarPiramidesComponent implements OnInit {
     }
 
     this.loading = true;
+    this.loadingMessage = 'Salvando alterações...';
+    
     const resultado = await this.piramidesService.atualizarPiramide(
       this.piramideEdicao.id!,
       this.piramideEdicao
@@ -226,13 +349,40 @@ export class GerenciarPiramidesComponent implements OnInit {
     
     if (resultado.success) {
       this.mostrarMensagem(resultado.message, 'success');
-      await this.carregarDados();
+      
+      // ✅ RECARREGAR dados após edição
+      await this.carregarDados(true);
+      
       this.fecharModalEdicao();
     } else {
       this.mostrarMensagem(resultado.message, 'error');
     }
     
     this.loading = false;
+    this.loadingMessage = '';
+  }
+
+  // ✅ NOVO: Método para aplicar filtros
+  aplicarFiltros() {
+    // Os filtros são aplicados automaticamente pelo getter piramidesFiltradas
+    console.log('🔍 Filtros aplicados:', {
+      status: this.filtroStatus,
+      categoria: this.filtroCategoria,
+      busca: this.termoBusca
+    });
+  }
+
+  // ✅ NOVO: Método para limpar filtros
+  limparFiltros() {
+    this.filtroStatus = 'todas';
+    this.filtroCategoria = 'todas';
+    this.termoBusca = '';
+    console.log('🗑️ Filtros limpos');
+  }
+
+  // ✅ NOVO: TrackBy function para performance
+  trackByPiramideId(index: number, piramide: PiramideSeletor): string {
+    return piramide.id;
   }
 
   fecharModalEdicao() {
@@ -243,6 +393,7 @@ export class GerenciarPiramidesComponent implements OnInit {
 
   // ========== ✅ NOVAS AÇÕES DA PIRÂMIDE: REATIVAÇÃO E EXCLUSÃO ==========
   
+  // ✅ MÉTODO CORRIGIDO: alterarStatus com refresh
   async alterarStatus(piramide: PiramideSeletor, novoStatus: Piramide['status']) {
     let confirmacao = false;
     let mensagemConfirmacao = '';
@@ -282,16 +433,21 @@ export class GerenciarPiramidesComponent implements OnInit {
     if (!confirmacao) return;
 
     this.loading = true;
+    this.loadingMessage = 'Alterando status...';
+    
     const resultado = await this.piramidesService.alterarStatusPiramide(piramide.id, novoStatus);
     
     if (resultado.success) {
       this.mostrarMensagem(resultado.message, 'success');
-      await this.carregarDados();
+      
+      // ✅ RECARREGAR dados após alteração
+      await this.carregarDados(true);
     } else {
       this.mostrarMensagem(resultado.message, 'error');
     }
     
     this.loading = false;
+    this.loadingMessage = '';
   }
 
   // ✅ NOVA FUNÇÃO: Reativar pirâmide
@@ -310,22 +466,29 @@ export class GerenciarPiramidesComponent implements OnInit {
     this.mostrarModalConfirmacaoExclusao = true;
   }
 
-  // ✅ NOVA FUNÇÃO: Excluir pirâmide
+  // ✅ MÉTODO CORRIGIDO: excluirPiramide com refresh
   async excluirPiramide() {
     if (!this.piramideParaExcluir) return;
 
     this.loading = true;
+    this.loadingMessage = 'Excluindo pirâmide...';
+    console.log('🗑️ Excluindo pirâmide:', this.piramideParaExcluir.nome);
+    
     const resultado = await this.piramidesService.excluirPiramide(this.piramideParaExcluir.id);
     
     if (resultado.success) {
       this.mostrarMensagem(resultado.message, 'success');
-      await this.carregarDados();
+      
+      // ✅ RECARREGAR dados após exclusão
+      await this.carregarDados(true);
+      
       this.fecharModalConfirmacaoExclusao();
     } else {
       this.mostrarMensagem(resultado.message, 'error');
     }
     
     this.loading = false;
+    this.loadingMessage = '';
   }
 
   fecharModalConfirmacaoExclusao() {
@@ -341,6 +504,7 @@ export class GerenciarPiramidesComponent implements OnInit {
     return this.textoConfirmacao.trim() === textoEsperado;
   }
 
+  // ✅ MÉTODO MELHORADO: arquivarPiramide com refresh
   async arquivarPiramide(piramide: PiramideSeletor) {
     const confirmacao = confirm(
       `Tem certeza que deseja ARQUIVAR a pirâmide "${piramide.nome}"?\n\n` +
@@ -353,16 +517,21 @@ export class GerenciarPiramidesComponent implements OnInit {
     if (!confirmacao) return;
 
     this.loading = true;
+    this.loadingMessage = 'Arquivando pirâmide...';
+    
     const resultado = await this.piramidesService.arquivarPiramide(piramide.id);
     
     if (resultado.success) {
       this.mostrarMensagem(resultado.message, 'success');
-      await this.carregarDados();
+      
+      // ✅ RECARREGAR dados após arquivamento
+      await this.carregarDados(true);
     } else {
       this.mostrarMensagem(resultado.message, 'error');
     }
     
     this.loading = false;
+    this.loadingMessage = '';
   }
 
   // ========== ESTATÍSTICAS ==========
