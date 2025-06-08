@@ -53,12 +53,12 @@ export class PiramideComponent implements OnInit, OnDestroy {
   jogadorInfo: any = null;
   posicaoLimiteDesafioTopo = 5;
   
-  // ========== MODAIS ==========
+  // ========== MODAIS - TODOS COMEÇAM FECHADOS ==========
   mostrarModalAdicionar = false;
   mostrarModalLogin = false;
   mostrarModalJogador = false;
   mostrarModalConfig = false;
-  mostrarModalGerenciarPiramides = false;
+  mostrarModalGerenciarPiramides = false; // ❌ NUNCA true automaticamente
   mostrarModalResultado = false;
   desafioAtual: DesafioInfo | null = null;
 
@@ -70,15 +70,21 @@ export class PiramideComponent implements OnInit, OnDestroy {
     private duplasService: DuplasService,
     private configuracaoService: ConfiguracaoService,
     private piramidesService: PiramidesService
-  ) {}
+  ) {
+    console.log('🏗️ PiramideComponent construído - TODOS OS MODAIS FECHADOS');
+  }
 
   async ngOnInit() {
+    console.log('🔄 ngOnInit - Estado inicial dos modais:', {
+      gerenciar: this.mostrarModalGerenciarPiramides,
+      adicionar: this.mostrarModalAdicionar,
+      login: this.mostrarModalLogin
+    });
     // Subscribir para mudanças na pirâmide atual
     const piramideSub = this.piramidesService.piramideAtual$.subscribe(piramide => {
+      console.log('📊 Pirâmide mudou:', piramide?.nome || 'null');
       this.piramideAtual = piramide;
-      if (piramide) {
-        this.carregarDadosPiramide();
-      }
+      // ❌ NÃO abrir modal aqui
     });
     this.subscriptions.push(piramideSub);
 
@@ -94,29 +100,45 @@ export class PiramideComponent implements OnInit, OnDestroy {
     this.carregando = true;
     
     try {
-      // Garantir que há uma pirâmide selecionada
-      this.piramideAtual = this.piramidesService.getPiramideAtual();
+      console.log('🚀 Inicializando PiramideComponent...');
+      console.log('👤 Usuário logado:', this.authService.isLoggedIn());
+      console.log('👑 É admin:', this.isAdmin());
       
-      if (!this.piramideAtual) {
-        // Se não há pirâmide, abrir modal de gerenciamento
-        this.mostrarModalGerenciarPiramides = true;
-        this.carregando = false;
-        return;
+      // Obter pirâmide atual do service
+      this.piramideAtual = this.piramidesService.getPiramideAtual();
+      console.log('📊 Pirâmide atual obtida:', this.piramideAtual?.nome || 'Nenhuma');
+      
+      if (this.piramideAtual) {
+        console.log('✅ Carregando dados da pirâmide:', this.piramideAtual.nome);
+        await this.carregarDadosPiramide();
+      } else {
+        console.log('⚠️ Sem pirâmide - mostrando estado vazio (SEM modal)');
+        // ❌ NÃO abrir modal aqui
+        this.basesReais = [];
       }
-
-      await this.carregarDadosPiramide();
+      
       this.verificarSessaoJogador();
     } catch (error) {
-      console.error('Erro ao inicializar:', error);
+      console.error('❌ Erro ao inicializar:', error);
     }
     
     this.carregando = false;
+    console.log('✅ Inicialização concluída - Estado dos modais:', {
+      gerenciar: this.mostrarModalGerenciarPiramides,
+      adicionar: this.mostrarModalAdicionar,
+      login: this.mostrarModalLogin
+    });
   }
 
   private async carregarDadosPiramide() {
-    if (!this.piramideAtual) return;
+    if (!this.piramideAtual) {
+      console.log('⚠️ Nenhuma pirâmide para carregar dados');
+      return;
+    }
 
     try {
+      console.log('📈 Carregando duplas da pirâmide:', this.piramideAtual.nome);
+      
       // Carregar duplas da pirâmide atual
       this.basesReais = await this.duplasService.obterDuplasOrganizadas(this.piramideAtual.id);
       
@@ -131,8 +153,9 @@ export class PiramideComponent implements OnInit, OnDestroy {
       // Carregar configuração da pirâmide
       this.posicaoLimiteDesafioTopo = this.piramideAtual.configuracao.posicaoLimiteDesafioTopo;
       
+      console.log('✅ Dados carregados - Total duplas:', this.getTotalDuplas());
     } catch (error) {
-      console.error('Erro ao carregar dados da pirâmide:', error);
+      console.error('❌ Erro ao carregar dados da pirâmide:', error);
     }
   }
 
@@ -158,6 +181,59 @@ export class PiramideComponent implements OnInit, OnDestroy {
     if (!confirmar) {
       // Tentar mudar para a pirâmide do jogador
       this.piramidesService.selecionarPiramide(this.jogadorInfo.dupla.piramideId);
+    }
+  }
+
+  // ========== MÉTODOS MANUAIS PARA ABRIR MODAIS ==========
+
+  // ✅ MÉTODO SEGURO: Só admin pode abrir modal de gerenciar
+  abrirModalGerenciarPiramides() {
+    console.log('🔘 Tentativa de abrir modal gerenciar pirâmides');
+    console.log('👑 É admin?', this.isAdmin());
+    
+    if (!this.isAdmin()) {
+      console.log('❌ Usuário não é admin - modal não será aberto');
+      alert('Apenas administradores podem gerenciar pirâmides');
+      return;
+    }
+    
+    console.log('✅ Abrindo modal gerenciar pirâmides');
+    this.mostrarModalGerenciarPiramides = true;
+  }
+
+  // ✅ MÉTODO SEGURO: Criar primeira pirâmide (apenas para admin)
+  async criarPrimeiraPiramide() {
+    console.log('🔘 Tentativa de criar primeira pirâmide');
+    console.log('👑 É admin?', this.isAdmin());
+    
+    if (!this.isAdmin()) {
+      alert('Apenas administradores podem criar pirâmides');
+      return;
+    }
+
+    if (confirm('Deseja criar a primeira pirâmide do sistema?')) {
+      this.carregando = true;
+      
+      try {
+        const resultado = await this.piramidesService.criarPrimeiraPiramide();
+        
+        if (resultado.success) {
+          alert(`✅ ${resultado.message}`);
+          
+          // Recarregar dados
+          this.piramideAtual = this.piramidesService.getPiramideAtual();
+          if (this.piramideAtual) {
+            await this.carregarDadosPiramide();
+          }
+        } else {
+          alert(`❌ ${resultado.message}`);
+        }
+      } catch (error) {
+        console.error('Erro ao criar primeira pirâmide:', error);
+        alert('Erro ao criar pirâmide. Verifique sua conexão e tente novamente.');
+      }
+      
+      this.carregando = false;
     }
   }
 
@@ -233,11 +309,13 @@ export class PiramideComponent implements OnInit, OnDestroy {
   }
 
   onPiramideSelecionada(piramide: Piramide) {
+    console.log('📊 Evento pirâmide selecionada:', piramide.nome);
     // A pirâmide já foi selecionada pelo service, apenas recarregar
     this.carregarDadosPiramide();
   }
 
   onPiramideSelecionadaVisitante(piramide: Piramide) {
+    console.log('👀 Visitante selecionou pirâmide:', piramide.nome);
     // Método específico para visitantes
     this.carregarDadosPiramide();
   }
@@ -845,11 +923,13 @@ export class PiramideComponent implements OnInit, OnDestroy {
   }
 
   onLoginSucesso() {
+    console.log('✅ Login admin realizado com sucesso');
     this.limparSelecao();
     this.carregarDuplas();
   }
 
   onJogadorLogado(jogadorInfo: any) {
+    console.log('✅ Login jogador realizado:', jogadorInfo.dupla.jogador1);
     this.jogadorInfo = jogadorInfo;
     this.limparSelecao();
     

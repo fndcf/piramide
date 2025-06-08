@@ -1,3 +1,4 @@
+<!-- src/app/components/login-modal/login-modal.html - CORRIGIDO -->
 <div class="modal-overlay" *ngIf="mostrar" (click)="fecharModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
@@ -15,7 +16,7 @@
             type="email" 
             [(ngModel)]="email" 
             name="email"
-            placeholder="admin@piramide.com"
+            placeholder="admin&#64;piramide.com"
             required
             [disabled]="loading"
             class="form-control">
@@ -37,6 +38,28 @@
           {{ errorMessage }}
         </div>
         
+        <!-- Instruções para primeiro acesso -->
+        <div class="firebase-instructions" *ngIf="mostrarInstrucoes">
+          <h4>🚀 Primeiro Acesso</h4>
+          <p>Parece que o usuário administrador ainda não foi criado no Firebase.</p>
+          <div class="instructions-steps">
+            <h5>Opção 1: Criar pelo Firebase Console (Recomendado)</h5>
+            <ol>
+              <li>Acesse o <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a></li>
+              <li>Vá em <strong>Authentication</strong> → <strong>Users</strong></li>
+              <li>Clique em <strong>"Add user"</strong></li>
+              <li>Email: <code>admin&#64;piramide.com</code></li>
+              <li>Senha: <strong>escolha uma senha segura</strong></li>
+              <li>Clique em <strong>"Add user"</strong></li>
+            </ol>
+            
+            <h5>Opção 2: Instruções no Console</h5>
+            <button type="button" class="btn-instructions" (click)="criarUsuarioAdmin()" [disabled]="loading">
+              📋 Ver Instruções Detalhadas
+            </button>
+          </div>
+        </div>
+        
         <div class="form-actions">
           <button 
             type="button" 
@@ -56,9 +79,16 @@
       </form>
       
       <div class="info-box">
-        <h4>ℹ️ Acesso Administrativo</h4>
+        <h4>🔥 Firebase Integration</h4>
         <p><strong>👑 Admin:</strong> admin&#64;piramide.com - Gerencia toda a pirâmide</p>
-        <p><strong>🎯 Função:</strong> Adicionar/remover duplas, controlar o sistema</p>
+        <p><strong>🎯 Função:</strong> Criar/remover duplas, gerenciar desafios</p>
+        <p><strong>🛡️ Segurança:</strong> Dados sincronizados em tempo real</p>
+        
+        <div class="firebase-status">
+          <p><strong>📱 Status:</strong> 
+            <span class="status-badge connected">Conectado ao Firebase</span>
+          </p>
+        </div>
       </div>
     </div>
   </div>

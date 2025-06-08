@@ -1,3 +1,4 @@
+// src/app/components/login-jogador-modal/login-jogador-modal.ts - CORRIGIDO
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -44,24 +45,32 @@ export class LoginJogadorModalComponent {
       if (dupla) {
         this.duplaEncontrada = dupla;
         
-        // Criar sessão de jogador usando o AuthService
+        // Criar informações do jogador
         const jogadorInfo = {
           duplaId: dupla.id,
           dupla: dupla
         };
         
-        this.authService.loginJogador(jogadorInfo);
-        this.jogadorLogado.emit(jogadorInfo);
+        // Fazer login do jogador usando o método corrigido
+        const loginResult = await this.authService.loginJogador(jogadorInfo);
         
-        // Fechar modal após 3 segundos para o usuário ver as informações
-        setTimeout(() => {
-          this.fecharModal();
-        }, 3000);
+        if (loginResult.success) {
+          this.jogadorLogado.emit(jogadorInfo);
+          
+          // Fechar modal após 3 segundos para o usuário ver as informações
+          setTimeout(() => {
+            this.fecharModal();
+          }, 3000);
+        } else {
+          this.errorMessage = loginResult.error || 'Erro ao fazer login';
+          this.duplaEncontrada = null;
+        }
         
       } else {
         this.errorMessage = 'Telefone não encontrado. Verifique se o número está correto.';
       }
     } catch (error) {
+      console.error('Erro ao buscar dupla:', error);
       this.errorMessage = 'Erro ao buscar dupla. Tente novamente.';
     }
     
