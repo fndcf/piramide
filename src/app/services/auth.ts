@@ -1,4 +1,5 @@
-// src/app/services/auth.ts - ATUALIZADO COM FIREBASE
+// src/app/services/auth.ts - VERSÃO SIMPLIFICADA
+
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { 
@@ -7,23 +8,20 @@ import {
   signOut, 
   onAuthStateChanged,
   User,
-  signInAnonymously,
   UserCredential
 } from '@angular/fire/auth';
-import { 
-  Firestore, 
-  doc, 
-  getDoc, 
-  setDoc 
-} from '@angular/fire/firestore';
+import { Firestore } from '@angular/fire/firestore';
 
+// ✅ INTERFACE SIMPLES - Apenas admin e jogador
 interface AppUser {
   uid: string;
   email?: string | null;
-  tipo: 'admin' | 'jogador' | 'anonimo';
+  tipo: 'admin' | 'jogador';
+  displayName: string;
+  // Propriedades específicas do jogador
   duplaId?: string;
   dupla?: any;
-  displayName?: string;
+  telefone?: string;
 }
 
 @Injectable({
@@ -35,26 +33,15 @@ export class AuthService {
   
   // Email do administrador
   private readonly ADMIN_EMAIL = 'admin@piramide.com';
-  private readonly ADMIN_PASSWORD = 'admin123'; // Você pode mudar isso
 
   constructor(
     private auth: Auth,
     private firestore: Firestore
   ) {
-    // Monitorar mudanças no estado de autenticação
+    // ✅ MONITORAR apenas login de admin via Firebase Auth
     onAuthStateChanged(this.auth, (user: User | null) => {
-      if (user) {
-        this.handleAuthStateChange(user);
-      } else {
-        this.currentUserSubject.next(null);
-      }
-    });
-  }
-
-  private async handleAuthStateChange(user: User): Promise<void> {
-    try {
-      if (user.email === this.ADMIN_EMAIL) {
-        // Usuário administrador
+      if (user && user.email === this.ADMIN_EMAIL) {
+        // Usuário administrador logado
         const appUser: AppUser = {
           uid: user.uid,
           email: user.email,
@@ -62,51 +49,18 @@ export class AuthService {
           displayName: 'Administrador'
         };
         this.currentUserSubject.next(appUser);
-      } else if (user.isAnonymous) {
-        // Usuário anônimo (visitante)
-        const appUser: AppUser = {
-          uid: user.uid,
-          tipo: 'anonimo',
-          displayName: 'Visitante'
-        };
-        this.currentUserSubject.next(appUser);
-      } else {
-        // Verificar se é um jogador no Firestore
-        await this.verificarJogador(user);
+        console.log('👑 Admin logado via Firebase');
+      } else if (!user) {
+        // Verificar se há jogador logado localmente
+        this.verificarSessaoJogadorLocal();
       }
-    } catch (error) {
-      console.error('Erro ao processar mudança de auth:', error);
-      this.currentUserSubject.next(null);
-    }
+    });
+
+    // ✅ VERIFICAR sessão de jogador ao inicializar
+    this.verificarSessaoJogadorLocal();
   }
 
-  private async verificarJogador(user: User): Promise<void> {
-    try {
-      // Buscar dados do jogador no Firestore
-      const jogadorRef = doc(this.firestore, `usuarios_jogadores/${user.uid}`);
-      const jogadorSnap = await getDoc(jogadorRef);
-
-      if (jogadorSnap.exists()) {
-        const dadosJogador = jogadorSnap.data();
-        const appUser: AppUser = {
-          uid: user.uid,
-          email: user.email,
-          tipo: 'jogador',
-          duplaId: dadosJogador['duplaId'],
-          dupla: dadosJogador['dupla'],
-          displayName: `${dadosJogador['dupla']?.jogador1}/${dadosJogador['dupla']?.jogador2}`
-        };
-        this.currentUserSubject.next(appUser);
-      } else {
-        // Usuário não encontrado, fazer logout
-        await this.logout();
-      }
-    } catch (error) {
-      console.error('Erro ao verificar jogador:', error);
-      await this.logout();
-    }
-  }
-
+  // ✅ LOGIN ADMIN - Via Firebase (igual ao atual)
   async loginAdmin(email: string, password: string): Promise<{success: boolean, error?: string}> {
     try {
       if (email !== this.ADMIN_EMAIL) {
@@ -116,6 +70,7 @@ export class AuthService {
       const result: UserCredential = await signInWithEmailAndPassword(this.auth, email, password);
       
       if (result.user) {
+        console.log('✅ Admin logado com sucesso');
         return { success: true };
       } else {
         return { success: false, error: 'Falha na autenticação' };
@@ -123,7 +78,6 @@ export class AuthService {
     } catch (error: any) {
       console.error('Erro no login admin:', error);
       
-      // Mapear erros do Firebase para mensagens amigáveis
       switch (error.code) {
         case 'auth/user-not-found':
           return { success: false, error: 'Usuário administrador não encontrado' };
@@ -139,77 +93,124 @@ export class AuthService {
     }
   }
 
-  async loginJogador(jogadorInfo: {duplaId: string, dupla: any}): Promise<{success: boolean, error?: string}> {
+  // ✅ LOGIN JOGADOR - Via localStorage (sem Firebase)
+  async loginJogador(jogadorInfo: {duplaId: string, dupla: any, telefone: string}): Promise<{success: boolean, error?: string}> {
     try {
-      // Primeiro, fazer login anônimo para acessar o Firestore
-      const anonResult = await signInAnonymously(this.auth);
+      console.log('🏐 Login de jogador:', jogadorInfo.dupla.jogador1, '/', jogadorInfo.dupla.jogador2);
       
-      if (!anonResult.user) {
-        return { success: false, error: 'Erro na autenticação' };
+      // ✅ VALIDAÇÕES BÁSICAS
+      if (!jogadorInfo.duplaId || !jogadorInfo.dupla) {
+        return { success: false, error: 'Informações da dupla são obrigatórias' };
       }
 
-      // Salvar dados do jogador no Firestore para futuras consultas
-      await setDoc(doc(this.firestore, `usuarios_jogadores/${anonResult.user.uid}`), {
-        duplaId: jogadorInfo.duplaId,
-        dupla: jogadorInfo.dupla,
-        loginTimestamp: new Date()
-      });
+      if (!jogadorInfo.dupla.jogador1 || !jogadorInfo.dupla.jogador2) {
+        return { success: false, error: 'Dupla deve ter dois jogadores' };
+      }
 
-      // Atualizar o estado local
+      if (!jogadorInfo.telefone) {
+        return { success: false, error: 'Telefone é obrigatório' };
+      }
+
+      // ✅ CRIAR sessão do jogador
       const appUser: AppUser = {
-        uid: anonResult.user.uid,
+        uid: `jogador_${jogadorInfo.duplaId}`, // ID único baseado na dupla
         tipo: 'jogador',
+        displayName: `${jogadorInfo.dupla.jogador1}/${jogadorInfo.dupla.jogador2}`,
         duplaId: jogadorInfo.duplaId,
         dupla: jogadorInfo.dupla,
-        displayName: `${jogadorInfo.dupla.jogador1}/${jogadorInfo.dupla.jogador2}`
+        telefone: jogadorInfo.telefone
       };
+
+      // ✅ SALVAR sessão localmente (simples e eficiente)
+      const sessaoJogador = {
+        ...appUser,
+        loginTimestamp: new Date().toISOString(),
+        ultimoAcesso: new Date().toISOString()
+      };
+
+      localStorage.setItem('sessao_jogador', JSON.stringify(sessaoJogador));
       
+      // ✅ ATUALIZAR estado da aplicação
       this.currentUserSubject.next(appUser);
       
+      console.log('✅ Jogador logado com sucesso');
       return { success: true };
-    } catch (error: any) {
-      console.error('Erro no login jogador:', error);
-      return { success: false, error: 'Erro ao fazer login como jogador' };
-    }
-  }
-
-  // Método auxiliar para buscar jogador por telefone (será usado pelo componente)
-  async buscarJogadorPorTelefone(telefone: string): Promise<{success: boolean, jogador?: any, error?: string}> {
-    try {
-      // TODO: Implementar busca no Firestore
-      // Por enquanto retorna erro para implementação futura
-      return { success: false, error: 'Busca por telefone ainda não implementada no Firebase' };
-    } catch (error: any) {
-      console.error('Erro ao buscar jogador:', error);
-      return { success: false, error: 'Erro ao buscar jogador' };
-    }
-  }
-
-  async loginAnonimo(): Promise<{success: boolean, error?: string}> {
-    try {
-      const result = await signInAnonymously(this.auth);
       
-      if (result.user) {
-        return { success: true };
-      } else {
-        return { success: false, error: 'Falha na autenticação anônima' };
-      }
     } catch (error: any) {
-      console.error('Erro no login anônimo:', error);
-      return { success: false, error: 'Erro ao entrar como visitante' };
+      console.error('❌ Erro no login jogador:', error);
+      return { success: false, error: 'Erro ao fazer login como jogador. Tente novamente.' };
     }
   }
 
+  // ✅ VERIFICAR sessão de jogador salva localmente
+  private verificarSessaoJogadorLocal(): void {
+    try {
+      const sessaoSalva = localStorage.getItem('sessao_jogador');
+      
+      if (sessaoSalva) {
+        const sessao = JSON.parse(sessaoSalva);
+        
+        // ✅ VERIFICAR se a sessão não expirou (24 horas)
+        const loginTime = new Date(sessao.loginTimestamp);
+        const agora = new Date();
+        const diferencaHoras = (agora.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
+        
+        if (diferencaHoras <= 24) {
+          // ✅ SESSÃO VÁLIDA - restaurar jogador
+          const appUser: AppUser = {
+            uid: sessao.uid,
+            tipo: 'jogador',
+            displayName: sessao.displayName,
+            duplaId: sessao.duplaId,
+            dupla: sessao.dupla,
+            telefone: sessao.telefone
+          };
+          
+          // Atualizar último acesso
+          sessao.ultimoAcesso = new Date().toISOString();
+          localStorage.setItem('sessao_jogador', JSON.stringify(sessao));
+          
+          this.currentUserSubject.next(appUser);
+          console.log('🔄 Sessão de jogador restaurada:', appUser.displayName);
+        } else {
+          // ✅ SESSÃO EXPIRADA - remover
+          localStorage.removeItem('sessao_jogador');
+          console.log('⏰ Sessão de jogador expirada - removida');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar sessão local:', error);
+      localStorage.removeItem('sessao_jogador');
+    }
+  }
+
+  // ✅ LOGOUT GERAL
   async logout(): Promise<void> {
     try {
-      await signOut(this.auth);
+      const currentUser = this.currentUserSubject.value;
+      
+      if (currentUser?.tipo === 'admin') {
+        // ✅ LOGOUT DO ADMIN - via Firebase
+        await signOut(this.auth);
+        console.log('👑 Admin deslogado');
+      } else if (currentUser?.tipo === 'jogador') {
+        // ✅ LOGOUT DO JOGADOR - remover sessão local
+        localStorage.removeItem('sessao_jogador');
+        console.log('🏐 Jogador deslogado');
+      }
+      
+      // ✅ LIMPAR estado da aplicação
       this.currentUserSubject.next(null);
+      
     } catch (error) {
       console.error('Erro no logout:', error);
+      // ✅ FORÇAR limpeza mesmo com erro
+      localStorage.removeItem('sessao_jogador');
+      this.currentUserSubject.next(null);
     }
   }
 
-  // Métodos de verificação de tipo de usuário
+  // ✅ MÉTODOS DE VERIFICAÇÃO (simplificados)
   isAdmin(): boolean {
     const currentUser = this.currentUserSubject.value;
     return currentUser?.tipo === 'admin';
@@ -218,11 +219,6 @@ export class AuthService {
   isJogador(): boolean {
     const currentUser = this.currentUserSubject.value;
     return currentUser?.tipo === 'jogador';
-  }
-
-  isAnonimo(): boolean {
-    const currentUser = this.currentUserSubject.value;
-    return currentUser?.tipo === 'anonimo';
   }
 
   isLoggedIn(): boolean {
@@ -237,17 +233,14 @@ export class AuthService {
     return this.auth.currentUser;
   }
 
-  // Método para criar o usuário administrador (executar uma vez)
+  // ✅ MÉTODO para criar usuário admin (igual ao atual)
   async criarUsuarioAdmin(): Promise<{success: boolean, message: string}> {
     try {
-      // Este método deve ser executado apenas uma vez para criar o admin
-      // Em produção, você pode fazer isso direto no Firebase Console
-      
       console.log('Para criar o usuário administrador:');
       console.log('1. Vá no Firebase Console > Authentication');
       console.log('2. Clique em "Add user"');
       console.log(`3. Email: ${this.ADMIN_EMAIL}`);
-      console.log(`4. Password: ${this.ADMIN_PASSWORD}`);
+      console.log('4. Password: escolha uma senha segura');
       
       return {
         success: true,
@@ -258,6 +251,39 @@ export class AuthService {
         success: false,
         message: 'Erro ao criar usuário admin'
       };
+    }
+  }
+
+  // ✅ MÉTODO para obter informações específicas do jogador
+  getJogadorInfo(): {duplaId: string, dupla: any, telefone: string} | null {
+    const currentUser = this.currentUserSubject.value;
+    
+    if (currentUser?.tipo === 'jogador') {
+      return {
+        duplaId: currentUser.duplaId!,
+        dupla: currentUser.dupla,
+        telefone: currentUser.telefone!
+      };
+    }
+    
+    return null;
+  }
+
+  // ✅ MÉTODO para verificar se a sessão do jogador ainda é válida
+  verificarValidadeSessaoJogador(): boolean {
+    try {
+      const sessaoSalva = localStorage.getItem('sessao_jogador');
+      
+      if (!sessaoSalva) return false;
+      
+      const sessao = JSON.parse(sessaoSalva);
+      const loginTime = new Date(sessao.loginTimestamp);
+      const agora = new Date();
+      const diferencaHoras = (agora.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
+      
+      return diferencaHoras <= 24;
+    } catch {
+      return false;
     }
   }
 }

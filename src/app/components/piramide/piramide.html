@@ -92,10 +92,6 @@
         
         <!-- ✅ CORRIGIDO: Controles de Admin com botão adicional -->
         <div class="admin-controls" *ngIf="isAdmin()">
-          <!-- ✅ BOTÃO DE DEBUG TEMPORÁRIO -->
-          <button class="btn-admin btn-debug" (click)="debugLoginStatus()">
-            🐛 Debug
-          </button>
           
           <button class="btn-admin" (click)="mostrarModalAdicionar = true">
             ➕ Adicionar Dupla

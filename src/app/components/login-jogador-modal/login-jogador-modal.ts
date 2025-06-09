@@ -1,4 +1,5 @@
-// src/app/components/login-jogador-modal/login-jogador-modal.ts - CORRIGIDO
+// src/app/components/login-jogador-modal/login-jogador-modal.ts - VERSÃO SIMPLIFICADA
+
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -28,8 +29,15 @@ export class LoginJogadorModalComponent {
   ) {}
 
   async onLogin() {
+    // ✅ VALIDAÇÕES BÁSICAS
     if (!this.telefone) {
       this.errorMessage = 'Digite um telefone válido';
+      return;
+    }
+
+    const telefoneLimpo = this.limparTelefone(this.telefone);
+    if (telefoneLimpo.length < 10) {
+      this.errorMessage = 'Digite um telefone válido com pelo menos 10 dígitos';
       return;
     }
 
@@ -38,26 +46,30 @@ export class LoginJogadorModalComponent {
     this.duplaEncontrada = null;
 
     try {
-      // Buscar dupla pelo telefone
-      const duplas = await this.duplasService.obterDuplas();
-      const dupla = duplas.find(d => this.limparTelefone(d.telefone || '') === this.limparTelefone(this.telefone));
+      console.log('🔍 Buscando dupla por telefone:', telefoneLimpo);
+      
+      // ✅ BUSCAR dupla pelo telefone
+      const dupla = await this.duplasService.obterDuplasPorTelefone(telefoneLimpo);
       
       if (dupla) {
+        console.log('✅ Dupla encontrada:', dupla);
         this.duplaEncontrada = dupla;
         
-        // Criar informações do jogador
+        // ✅ PREPARAR informações para login
         const jogadorInfo = {
           duplaId: dupla.id,
-          dupla: dupla
+          dupla: dupla,
+          telefone: telefoneLimpo
         };
         
-        // Fazer login do jogador usando o método corrigido
+        // ✅ FAZER LOGIN simples (sem Firebase)
         const loginResult = await this.authService.loginJogador(jogadorInfo);
         
         if (loginResult.success) {
+          console.log('✅ Login do jogador realizado com sucesso');
           this.jogadorLogado.emit(jogadorInfo);
           
-          // Fechar modal após 3 segundos para o usuário ver as informações
+          // ✅ MOSTRAR informações da dupla por 3 segundos
           setTimeout(() => {
             this.fecharModal();
           }, 3000);
@@ -67,32 +79,46 @@ export class LoginJogadorModalComponent {
         }
         
       } else {
-        this.errorMessage = 'Telefone não encontrado. Verifique se o número está correto.';
+        console.log('❌ Dupla não encontrada para telefone:', telefoneLimpo);
+        this.errorMessage = 'Telefone não encontrado. Verifique se o número está correto ou entre em contato com o administrador.';
       }
     } catch (error) {
-      console.error('Erro ao buscar dupla:', error);
+      console.error('❌ Erro ao buscar dupla:', error);
       this.errorMessage = 'Erro ao buscar dupla. Tente novamente.';
     }
     
     this.loading = false;
   }
 
+  // ✅ FORMATAÇÃO automática do telefone
   formatarTelefone(event: any) {
     let valor = event.target.value.replace(/\D/g, '');
     
-    if (valor.length <= 11) {
-      if (valor.length <= 2) {
-        valor = valor.replace(/(\d{0,2})/, '($1');
-      } else if (valor.length <= 7) {
-        valor = valor.replace(/(\d{2})(\d{0,5})/, '($1) $2');
-      } else {
-        valor = valor.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
-      }
+    // Limitar a 11 dígitos
+    if (valor.length > 11) {
+      valor = valor.substring(0, 11);
+    }
+    
+    // Formatar conforme o tamanho
+    if (valor.length <= 2) {
+      valor = valor.replace(/(\d{0,2})/, '($1');
+    } else if (valor.length <= 7) {
+      valor = valor.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+    } else if (valor.length <= 10) {
+      valor = valor.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+    } else {
+      valor = valor.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
     }
     
     this.telefone = valor;
+    
+    // Limpar mensagem de erro ao digitar
+    if (this.errorMessage) {
+      this.errorMessage = '';
+    }
   }
 
+  // ✅ FUNÇÃO auxiliar para limpar telefone
   private limparTelefone(telefone: string): string {
     return telefone.replace(/\D/g, '');
   }

@@ -17,6 +17,7 @@ export class DuplasService {
 
   // ========== ✅ VALIDAÇÕES DE PROTEÇÃO INTEGRADAS ==========
 
+  // ✅ ADICIONAR este método no DuplasService (substituir o método existente)
   async criarDupla(novaDupla: NovaDupla, piramideId?: string): Promise<{ success: boolean; message: string }> {
     try {
       await this.delay(500);
@@ -30,12 +31,40 @@ export class DuplasService {
         };
       }
 
-      // ✅ NOVA VALIDAÇÃO: Verificar se a pirâmide aceita duplas
+      // ✅ VALIDAÇÃO DE PROTEÇÃO: Verificar se a pirâmide aceita duplas
       const podeAdicionarDuplas = this.piramidesService.podeAdicionarDuplas(targetPiramideId);
       if (!podeAdicionarDuplas.pode) {
         return {
           success: false,
           message: podeAdicionarDuplas.motivo!
+        };
+      }
+
+      // ✅ NOVA VALIDAÇÃO: Verificar se telefone já existe
+      if (novaDupla.telefone && novaDupla.telefone.trim()) {
+        const telefoneExistente = await this.verificarTelefoneExistente(novaDupla.telefone.trim());
+        if (telefoneExistente.existe) {
+          return {
+            success: false,
+            message: `Este telefone já está cadastrado para a dupla: ${telefoneExistente.dupla!.jogador1}/${telefoneExistente.dupla!.jogador2}`
+          };
+        }
+      }
+
+      // ✅ VALIDAÇÃO: Verificar se jogadores são diferentes
+      if (novaDupla.jogador1.toLowerCase().trim() === novaDupla.jogador2.toLowerCase().trim()) {
+        return {
+          success: false,
+          message: 'Os jogadores devem ser pessoas diferentes'
+        };
+      }
+
+      // ✅ VALIDAÇÃO: Verificar se dupla já existe (mesmos jogadores)
+      const duplaExistente = await this.verificarDuplaExistente(novaDupla.jogador1.trim(), novaDupla.jogador2.trim(), targetPiramideId);
+      if (duplaExistente.existe) {
+        return {
+          success: false,
+          message: `Esta dupla já existe na pirâmide: ${duplaExistente.dupla!.jogador1}/${duplaExistente.dupla!.jogador2}`
         };
       }
 
@@ -82,11 +111,56 @@ export class DuplasService {
         message: `Dupla adicionada na ${posicaoFinal}ª posição da pirâmide` 
       };
     } catch (error) {
+      console.error('Erro ao criar dupla:', error);
       return { 
         success: false, 
         message: 'Erro ao adicionar dupla. Tente novamente.' 
       };
     }
+  }
+
+  // ✅ NOVO MÉTODO: Verificar se telefone já existe
+  async verificarTelefoneExistente(telefone: string): Promise<{ existe: boolean; dupla?: Dupla }> {
+    await this.delay(100);
+    
+    const telefoneLimpo = this.limparTelefone(telefone);
+    
+    if (!telefoneLimpo || telefoneLimpo.length < 10) {
+      return { existe: false };
+    }
+    
+    const dupla = this.duplas.find(d => {
+      if (!d.ativa || !d.telefone) return false;
+      return this.limparTelefone(d.telefone) === telefoneLimpo;
+    });
+    
+    return {
+      existe: !!dupla,
+      dupla: dupla
+    };
+  }
+
+  // ✅ NOVO MÉTODO: Verificar se dupla já existe (mesmos jogadores)
+  async verificarDuplaExistente(jogador1: string, jogador2: string, piramideId: string): Promise<{ existe: boolean; dupla?: Dupla }> {
+    await this.delay(100);
+    
+    const nome1 = jogador1.toLowerCase().trim();
+    const nome2 = jogador2.toLowerCase().trim();
+    
+    const dupla = this.duplas.find(d => {
+      if (!d.ativa || d.piramideId !== piramideId) return false;
+      
+      const dNome1 = d.jogador1.toLowerCase().trim();
+      const dNome2 = d.jogador2.toLowerCase().trim();
+      
+      // Verificar se é a mesma dupla (considerando ordem inversa também)
+      return (dNome1 === nome1 && dNome2 === nome2) || (dNome1 === nome2 && dNome2 === nome1);
+    });
+    
+    return {
+      existe: !!dupla,
+      dupla: dupla
+    };
   }
 
   async removerDupla(duplaId: string): Promise<{ success: boolean, message: string }> {
@@ -760,10 +834,18 @@ export class DuplasService {
 
   // ========== MÉTODOS AUXILIARES PARA INTEGRAÇÃO ==========
 
+  // ✅ CORRIGIR método existente obterDuplasPorTelefone
   async obterDuplasPorTelefone(telefone: string, piramideId?: string): Promise<Dupla | null> {
     await this.delay(200);
     
-    const telefoneLimpo = telefone.replace(/\D/g, '');
+    const telefoneLimpo = this.limparTelefone(telefone);
+    
+    if (!telefoneLimpo || telefoneLimpo.length < 10) {
+      console.log('❌ Telefone inválido:', telefone);
+      return null;
+    }
+    
+    console.log('🔍 Buscando dupla por telefone limpo:', telefoneLimpo);
     
     let duplas = this.duplas.filter(d => d.ativa);
     
@@ -772,10 +854,98 @@ export class DuplasService {
       duplas = duplas.filter(d => d.piramideId === piramideId);
     }
     
-    return duplas.find(d => {
-      const telefoneDupla = (d.telefone || '').replace(/\D/g, '');
+    const dupla = duplas.find(d => {
+      if (!d.telefone) return false;
+      const telefoneDupla = this.limparTelefone(d.telefone);
+      console.log(`🔍 Comparando: ${telefoneLimpo} === ${telefoneDupla}`);
       return telefoneDupla === telefoneLimpo;
-    }) || null;
+    });
+    
+    console.log('📊 Resultado da busca:', dupla ? `${dupla.jogador1}/${dupla.jogador2}` : 'Não encontrada');
+    
+    return dupla || null;
+  }
+
+  // ✅ ADICIONAR método auxiliar para limpar telefone
+  private limparTelefone(telefone: string): string {
+    if (!telefone) return '';
+    return telefone.replace(/\D/g, '');
+  }
+
+  // ✅ MÉTODO PARA VALIDAR FORMATO DE TELEFONE
+  validarFormatoTelefone(telefone: string): { valido: boolean; motivo?: string } {
+    if (!telefone || telefone.trim() === '') {
+      return { valido: false, motivo: 'Telefone é obrigatório' };
+    }
+    
+    const telefoneLimpo = this.limparTelefone(telefone);
+    
+    if (telefoneLimpo.length < 10) {
+      return { valido: false, motivo: 'Telefone deve ter pelo menos 10 dígitos' };
+    }
+    
+    if (telefoneLimpo.length > 11) {
+      return { valido: false, motivo: 'Telefone deve ter no máximo 11 dígitos' };
+    }
+    
+    // Verificar se é um número válido brasileiro
+    if (telefoneLimpo.length === 11) {
+      // Celular: deve começar com DDD válido e o terceiro dígito deve ser 9
+      const ddd = telefoneLimpo.substring(0, 2);
+      const terceiroDigito = telefoneLimpo.charAt(2);
+      
+      const dddsValidos = [
+        '11', '12', '13', '14', '15', '16', '17', '18', '19', // SP
+        '21', '22', '24', // RJ/ES
+        '27', '28', // ES
+        '31', '32', '33', '34', '35', '37', '38', // MG
+        '41', '42', '43', '44', '45', '46', // PR
+        '47', '48', '49', // SC
+        '51', '53', '54', '55', // RS
+        '61', // DF
+        '62', '64', // GO
+        '63', // TO
+        '65', '66', // MT
+        '67', // MS
+        '68', // AC
+        '69', // RO
+        '71', '73', '74', '75', '77', // BA
+        '79', // SE
+        '81', '87', // PE
+        '82', // AL
+        '83', // PB
+        '84', // RN
+        '85', '88', // CE
+        '86', '89', // PI
+        '91', '93', '94', // PA
+        '92', '97', // AM
+        '95', // RR
+        '96', // AP
+        '98', '99', // MA
+      ];
+      
+      if (!dddsValidos.includes(ddd)) {
+        return { valido: false, motivo: 'DDD inválido' };
+      }
+      
+      if (terceiroDigito !== '9') {
+        return { valido: false, motivo: 'Celular deve ter 9 como terceiro dígito' };
+      }
+    } else if (telefoneLimpo.length === 10) {
+      // Telefone fixo: deve começar com DDD válido
+      const ddd = telefoneLimpo.substring(0, 2);
+      const terceiroDigito = telefoneLimpo.charAt(2);
+      
+      if (parseInt(ddd) < 11 || parseInt(ddd) > 99) {
+        return { valido: false, motivo: 'DDD inválido' };
+      }
+      
+      if (terceiroDigito === '0' || terceiroDigito === '1') {
+        return { valido: false, motivo: 'Terceiro dígito inválido para telefone fixo' };
+      }
+    }
+    
+    return { valido: true };
   }
 
   async atualizarDupla(duplaId: string, dados: Partial<Dupla>): Promise<{ success: boolean, message: string }> {

@@ -249,25 +249,6 @@ export class PiramideComponent implements OnInit, OnDestroy {
     }, 100);
   }
 
-  // 2. Método de debug para verificar estado
-  debugLoginStatus() {
-    console.log('=== 🐛 DEBUG LOGIN STATUS ===');
-    console.log('🔓 isLoggedIn():', this.authService.isLoggedIn());
-    console.log('👑 isAdmin():', this.isAdmin());
-    console.log('🏐 isJogador():', this.isJogador());
-    console.log('👤 getCurrentUser():', this.authService.getCurrentUser());
-    console.log('📊 piramideAtual:', this.piramideAtual);
-    console.log('🔧 mostrarModalGerenciarPiramides:', this.mostrarModalGerenciarPiramides);
-    console.log('🔧 mostrarModalLogin:', this.mostrarModalLogin);
-    console.log('🔧 mostrarModalAdicionar:', this.mostrarModalAdicionar);
-    console.log('========================');
-    
-    // ✅ Teste direto do modal
-    console.log('🧪 Testando abertura direta do modal...');
-    this.mostrarModalGerenciarPiramides = true;
-    console.log('✅ Modal definido como true');
-  }
-
   // ✅ MÉTODO SEGURO: Criar primeira pirâmide (apenas para admin)
   async criarPrimeiraPiramide() {
     console.log('🔘 Tentativa de criar primeira pirâmide');
@@ -1030,33 +1011,6 @@ export class PiramideComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('❌ Erro ao carregar dados gerais:', error);
     }
-  }
-
-  // 6. ✅ ADICIONAR método de debug melhorado:
-  debugPiramideStatus() {
-    console.log('=== 🐛 DEBUG PIRÂMIDE STATUS ===');
-    console.log('🏗️ piramideAtual (local):', this.piramideAtual);
-    console.log('🔧 piramideAtual (service):', this.piramidesService.getPiramideAtual());
-    console.log('📊 basesReais.length:', this.basesReais.length);
-    console.log('📈 totalDuplas:', this.getTotalDuplas());
-    console.log('👑 isAdmin:', this.isAdmin());
-    console.log('🔓 isLoggedIn:', this.authService.isLoggedIn());
-    console.log('🔧 mostrarModalGerenciarPiramides:', this.mostrarModalGerenciarPiramides);
-    console.log('========================');
-  }
-
-  // 7. Método para teste manual (remover após correção)
-  testarModalGerenciar() {
-    console.log('🧪 TESTE MANUAL: Forçando abertura do modal');
-    this.mostrarModalGerenciarPiramides = true;
-    console.log('🔧 Modal definido como true');
-    
-    // Verificar após um pequeno delay
-    setTimeout(() => {
-      console.log('⏰ Verificação após 1 segundo:');
-      console.log('- mostrarModalGerenciarPiramides:', this.mostrarModalGerenciarPiramides);
-      console.log('- Elemento modal no DOM:', document.querySelector('app-gerenciar-piramides'));
-    }, 1000);
   }
 
   // 8. Getter para verificação reativa do estado de admin
