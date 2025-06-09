@@ -8,13 +8,6 @@
     <div class="modal-body">
       <p class="subtitle">Configure ATÉ qual posição os jogadores podem desafiar livremente até o topo</p>
       
-      <div class="current-issue-alert">
-        <h4>✅ Lógica Corrigida</h4>
-        <p><strong>Nova interpretação:</strong> "ATÉ o 5º colocado" significa que 2º, 3º, 4º e 5º podem desafiar até o 1º</p>
-        <p><strong>Resultado:</strong> 6º, 7º, 8º... seguem apenas a regra original</p>
-        <p><strong>Exemplo:</strong> Se configurar "ATÉ o 3º", apenas 2º e 3º podem desafiar livremente</p>
-      </div>
-      
       <form (ngSubmit)="onSalvar()" #configForm="ngForm">
         <div class="form-group">
           <label>Posição Limite para Desafio Livre (ATÉ):</label>
@@ -54,25 +47,11 @@
                 </ul>
               </div>
               
-              <div class="exemplo-posicao cannot-challenge">
-                <strong>Posições que NÃO podem desafiar livremente:</strong>
-                <p class="positions-list">
-                  <span *ngFor="let pos of getExemplosConfiguracao().posicaoSemExcecao; let isLast = last">
-                    {{ pos }}º{{ !isLast ? ', ' : '' }}
-                  </span>
-                  <span> e todas as seguintes...</span>
-                </p>
-                <ul>
-                  <li>✅ <strong>Apenas regra original:</strong> Mesma base (à esquerda) + base acima (à direita)</li>
-                  <li>❌ <strong>Não podem:</strong> Desafiar livremente até o topo</li>
-                </ul>
-              </div>
-              
               <div class="regra-explicacao">
                 <p><strong>🎯 Resumo da Configuração:</strong></p>
                 <p>• <strong>1º lugar:</strong> Não precisa desafiar ninguém</p>
                 <p>• <strong>2º ao {{ posicaoLimite }}º:</strong> Podem desafiar até o 1º lugar</p>
-                <p>• <strong>{{ posicaoLimite + 1 }}º em diante:</strong> Apenas regra original</p>
+                <p>• <strong> Os que vem após o {{ posicaoLimite }}º </strong> Apenas regra original</p>
               </div>
             </div>
             
@@ -85,24 +64,6 @@
                   <li>❌ <strong>Nenhuma exceção:</strong> Ninguém pode desafiar livremente até o topo</li>
                 </ul>
               </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="recommendation-box">
-          <h4>💡 Exemplos Práticos</h4>
-          <div class="examples-grid">
-            <div class="example-item">
-              <strong>ATÉ o 3º:</strong> Apenas 2º e 3º podem ir ao 1º
-              <small>Mais restritivo</small>
-            </div>
-            <div class="example-item">
-              <strong>ATÉ o 5º:</strong> 2º, 3º, 4º e 5º podem ir ao 1º
-              <small>Equilibrado</small>
-            </div>
-            <div class="example-item">
-              <strong>ATÉ o 7º:</strong> 2º ao 7º podem ir ao 1º
-              <small>Mais permissivo</small>
             </div>
           </div>
         </div>

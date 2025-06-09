@@ -145,10 +145,7 @@ export class SeletorPiramideComponent implements OnInit, OnDestroy {
     const categorias = {
       'masculino': 'Masculino',
       'feminino': 'Feminino',
-      'misto': 'Misto',
-      'iniciante': 'Iniciante',
-      'avancado': 'Avançado',
-      'custom': 'Personalizado'
+      'mista': 'Mista'
     };
     return categorias[categoria as keyof typeof categorias] || categoria;
   }

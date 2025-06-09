@@ -5,7 +5,6 @@ import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth';
 import { DuplasService } from '../../services/duplas';
-import { ConfiguracaoService } from '../../services/configuracao';
 import { PiramidesService } from '../../services/piramides';
 import { AdicionarDuplaComponent } from '../adicionar-dupla/adicionar-dupla';
 import { LoginModalComponent } from '../login-modal/login-modal';
@@ -68,7 +67,6 @@ export class PiramideComponent implements OnInit, OnDestroy {
   constructor(
     public authService: AuthService,
     private duplasService: DuplasService,
-    private configuracaoService: ConfiguracaoService,
     private piramidesService: PiramidesService
   ) {
     console.log('🏗️ PiramideComponent construído - TODOS OS MODAIS FECHADOS');

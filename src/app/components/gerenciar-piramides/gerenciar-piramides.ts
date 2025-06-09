@@ -270,20 +270,6 @@ export class GerenciarPiramidesComponent implements OnInit {
     this.loadingMessage = '';
   }
 
-// ✅ ADICIONAR este método auxiliar na classe (opcional - para uso futuro):
-private converterParaSeletor(piramide: Piramide): PiramideSeletor {
-  return {
-    id: piramide.id,
-    nome: piramide.nome,
-    categoria: piramide.categoria,
-    status: piramide.status,
-    totalDuplas: 0,
-    cor: piramide.cor,
-    icone: piramide.icone,
-    ultimaAtividade: piramide.dataInicio
-  };
-}
-
   fecharModalNova() {
     this.mostrarModalNova = false;
     this.novaPiramide = this.resetarNovaPiramide();
@@ -313,7 +299,7 @@ private converterParaSeletor(piramide: Piramide): PiramideSeletor {
     return {
       nome: '',
       descricao: '',
-      categoria: 'misto',
+      categoria: 'mista',
       maxDuplas: 45,
       cor: this.cores && this.cores.length > 0 ? this.cores[0] : '#667eea',
       icone: this.icones && this.icones.length > 0 ? this.icones[0] : '🏆'

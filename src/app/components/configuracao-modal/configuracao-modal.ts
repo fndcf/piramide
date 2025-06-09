@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output, OnInit, OnChanges } from '@angu
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConfiguracaoService } from '../../services/configuracao';
-import { ConfiguracaoPiramide, NovaConfiguracao } from '../../models/configuracao.model';
+import { NovaConfiguracao } from '../../models/configuracao.model';
 
 @Component({
   selector: 'app-configuracao-modal',

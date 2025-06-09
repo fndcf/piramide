@@ -81,21 +81,7 @@
           </small>
         </div>
         <small class="help-text">Este telefone será usado para login do jogador</small>
-      </div>
-      
-      <div class="form-group">
-        <label>Email (opcional)</label>
-        <input 
-          type="email" 
-          [(ngModel)]="novaDupla.email" 
-          name="email"
-          placeholder="email@exemplo.com"
-          [disabled]="loading"
-          (input)="formatarEmail($event)"
-          class="form-control">
-        <small class="help-text">Email para contato (opcional)</small>
-      </div>
-      
+      </div>      
       <div class="form-group">
         <label>Observações (opcional)</label>
         <textarea 

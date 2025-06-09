@@ -93,7 +93,7 @@ export class PiramidesService {
     const piramidePadrao: NovaPiramide = {
       nome: 'Pirâmide Principal',
       descricao: 'Pirâmide principal do Beach Tennis',
-      categoria: 'misto',
+      categoria: 'mista',
       maxDuplas: 45,
       cor: '#667eea',
       icone: '🏆'
@@ -104,18 +104,6 @@ export class PiramidesService {
       await this.selecionarPiramide(result.piramide.id);
     }
     return result;
-  }
-
-  private inicializarDadosLocais() {
-    // Fallback para dados locais (código original mantido como backup)
-    const piramidesSalvas = localStorage.getItem('piramides');
-    if (piramidesSalvas) {
-      const piramides = JSON.parse(piramidesSalvas);
-      if (piramides.length > 0) {
-        this.piramideAtual = piramides[0];
-        this.piramideAtualSubject.next(this.piramideAtual);
-      }
-    }
   }
 
   private formatarPiramide(data: any): Piramide {
@@ -134,11 +122,7 @@ export class PiramidesService {
     return {
       posicaoLimiteDesafioTopo: 5,
       permitirDesafiosEntrePiramides: false,
-      diasPrazoResposta: 7,
-      maxDesafiosPorSemana: 2,
-      pontosVitoriaIgual: 10,
-      pontosVitoriaSuperior: 15,
-      pontosDerrota: -5
+      diasPrazoResposta: 7
     };
   }
 
@@ -705,10 +689,7 @@ export class PiramidesService {
     return [
       { value: 'masculino', label: 'Masculino', description: 'Apenas duplas masculinas' },
       { value: 'feminino', label: 'Feminino', description: 'Apenas duplas femininas' },
-      { value: 'misto', label: 'Misto', description: 'Duplas mistas ou qualquer gênero' },
-      { value: 'iniciante', label: 'Iniciante', description: 'Para jogadores iniciantes' },
-      { value: 'avancado', label: 'Avançado', description: 'Para jogadores experientes' },
-      { value: 'custom', label: 'Personalizada', description: 'Categoria personalizada' }
+      { value: 'mista', label: 'Mista', description: 'Duplas mistas ou qualquer gênero' }
     ];
   }
 
@@ -718,55 +699,5 @@ export class PiramidesService {
     this.piramidesCache = [];
     this.lastCacheUpdate = 0;
   }
-
-  // ========== MIGRAÇÃO DE DADOS ==========
   
-  async migrarDadosLocais(): Promise<{ success: boolean; message: string; migrados: number }> {
-    try {
-      const piramidesSalvas = localStorage.getItem('piramides');
-      if (!piramidesSalvas) {
-        return {
-          success: true,
-          message: 'Nenhum dado local encontrado para migrar',
-          migrados: 0
-        };
-      }
-
-      const piramides = JSON.parse(piramidesSalvas);
-      let migrados = 0;
-
-      for (const piramide of piramides) {
-        // Verificar se já existe
-        const existe = await this.firebase.get('piramides', piramide.id);
-        
-        if (!existe.success) {
-          // Migrar pirâmide
-          const result = await this.firebase.set('piramides', piramide.id, {
-            ...piramide,
-            dataInicio: new Date(piramide.dataInicio),
-            dataFim: piramide.dataFim ? new Date(piramide.dataFim) : null
-          });
-
-          if (result.success) {
-            migrados++;
-          }
-        }
-      }
-
-      this.limparCache();
-
-      return {
-        success: true,
-        message: `${migrados} pirâmide(s) migrada(s) com sucesso!`,
-        migrados
-      };
-    } catch (error: any) {
-      console.error('Erro ao migrar dados:', error);
-      return {
-        success: false,
-        message: 'Erro ao migrar dados locais',
-        migrados: 0
-      };
-    }
-  }
 }

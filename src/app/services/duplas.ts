@@ -89,12 +89,10 @@ export class DuplasService {
         telefone: novaDupla.telefone?.trim() || '',
         base: proximaBase,
         posicao: proximaPosicao,
-        pontos: 0,
         vitorias: 0,
         derrotas: 0,
         ativa: true,
         dataIngresso: new Date(),
-        email: novaDupla.email?.trim() || '',
         observacoes: novaDupla.observacoes?.trim() || ''
       };
 
@@ -372,74 +370,7 @@ export class DuplasService {
       // Encontrar o maior ID para continuar a sequência
       const maiorId = Math.max(...this.duplas.map(d => parseInt(d.id) || 0));
       this.nextId = maiorId + 1;
-    } else {
-      // Migrar dados existentes ou criar dados de exemplo
-      this.migrarDadosExistentes();
     }
-  }
-
-  private migrarDadosExistentes() {
-    // Verificar se há dados antigos sem pirâmideId
-    const dadosAntigos = localStorage.getItem('duplas_old');
-    if (dadosAntigos) {
-      const duplasAntigas = JSON.parse(dadosAntigos);
-      const piramidePadrao = this.piramidesService.getPiramideAtual();
-      
-      if (piramidePadrao) {
-        // Migrar duplas antigas para a pirâmide padrão
-        this.duplas = duplasAntigas.map((d: any) => ({
-          ...d,
-          piramideId: piramidePadrao.id,
-          dataIngresso: new Date(d.dataIngresso)
-        }));
-        
-        localStorage.removeItem('duplas_old');
-        this.salvarDados();
-      }
-    } else {
-      // Criar dados de exemplo apenas se não há nenhum dado
-      this.criarDadosExemplo();
-    }
-  }
-
-  private criarDadosExemplo() {
-    const piramidePadrao = this.piramidesService.getPiramideAtual();
-    if (!piramidePadrao) return;
-
-    this.duplas = [
-      {
-        id: '1',
-        piramideId: piramidePadrao.id,
-        jogador1: 'João',
-        jogador2: 'Pedro',
-        base: 1,
-        posicao: 1,
-        pontos: 150,
-        vitorias: 15,
-        derrotas: 2,
-        ativa: true,
-        dataIngresso: new Date('2024-01-01'),
-        telefone: '(11) 99999-0001'
-      },
-      {
-        id: '2',
-        piramideId: piramidePadrao.id,
-        jogador1: 'Ana',
-        jogador2: 'Maria',
-        base: 2,
-        posicao: 1,
-        pontos: 120,
-        vitorias: 12,
-        derrotas: 4,
-        ativa: true,
-        dataIngresso: new Date('2024-01-05'),
-        telefone: '(11) 99999-0002'
-      },
-      // ... resto dos dados de exemplo mantidos iguais
-    ];
-
-    this.nextId = 8;
-    this.salvarDados();
   }
 
   async obterDuplas(piramideId?: string): Promise<Dupla[]> {
@@ -504,10 +435,6 @@ export class DuplasService {
         // Atualizar estatísticas
         vencedor.vitorias = (vencedor.vitorias || 0) + 1;
         perdedor.derrotas = (perdedor.derrotas || 0) + 1;
-
-        // Atualizar pontos
-        vencedor.pontos = (vencedor.pontos || 0) + 10;
-        perdedor.pontos = Math.max(0, (perdedor.pontos || 0) - 5);
 
         this.salvarDados();
 
@@ -656,7 +583,6 @@ export class DuplasService {
       if (!transferencia.manterEstatisticas) {
         dupla.vitorias = 0;
         dupla.derrotas = 0;
-        dupla.pontos = 0;
       }
 
       // Adicionar observações da transferência

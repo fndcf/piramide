@@ -15,11 +15,9 @@ import {
   orderBy,
   limit,
   QueryConstraint,
-  DocumentData,
   onSnapshot,
   Unsubscribe
 } from '@angular/fire/firestore';
-import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'

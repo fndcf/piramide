@@ -23,7 +23,6 @@ export class AdicionarDuplaComponent {
     jogador1: '',
     jogador2: '',
     telefone: '',
-    email: '',
     observacoes: ''
   };
 
@@ -184,27 +183,6 @@ export class AdicionarDuplaComponent {
     this.onTelefoneChange();
   }
 
-  // ✅ NOVA FUNÇÃO: Formatar email em tempo real
-  formatarEmail(event: any) {
-    // Converter para minúsculas automaticamente
-    this.novaDupla.email = event.target.value.toLowerCase().trim();
-  }
-
-  // ✅ FUNÇÃO: Validar email (opcional)
-  private validarEmail(): boolean {
-    if (!this.novaDupla.email || this.novaDupla.email.trim() === '') {
-      return true; // Email é opcional
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(this.novaDupla.email.trim())) {
-      this.mostrarMensagem('Formato de email inválido', 'error');
-      return false;
-    }
-
-    return true;
-  }
-
   fecharModal() {
     this.mostrar = false;
     this.fechar.emit();
@@ -217,7 +195,6 @@ export class AdicionarDuplaComponent {
       jogador1: '',
       jogador2: '',
       telefone: '',
-      email: '',
       observacoes: ''
     };
     
