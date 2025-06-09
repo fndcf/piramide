@@ -1,0 +1,86 @@
+// ========== VARIÁVEIS GLOBAIS ==========
+// Usando @forward para tornar as variáveis disponíveis quando este arquivo for importado
+@use 'sass:color';
+@forward 'sass:color';
+
+// Cores do sistema
+$primary-color: #667eea !default;
+$primary-dark: #764ba2 !default;
+$secondary-color: #4ecdc4 !default;
+$secondary-dark: #44a08d !default;
+$accent-color: #ff6b6b !default;
+$accent-dark: #ee5a52 !default;
+
+// Cores de status
+$success-color: #28a745 !default;
+$error-color: #dc3545 !default;
+$warning-color: #ffc107 !default;
+$info-color: #17a2b8 !default;
+
+// Cores especiais
+$gold-color: #ffd700 !default;
+$gold-light: #ffed4e !default;
+
+// Cores derivadas usando color.scale() - CORRIGIDO: sem o namespace vars
+$error-color-dark: color.scale($error-color, $lightness: -10%) !default;
+$primary-color-light: color.scale($primary-color, $lightness: 20%) !default;
+$secondary-color-light: color.scale($secondary-color, $lightness: 20%) !default;
+
+// Gradientes principais
+$gradient-primary: linear-gradient(135deg, $primary-color 0%, $primary-dark 100%) !default;
+$gradient-secondary: linear-gradient(135deg, $secondary-color 0%, $secondary-dark 100%) !default;
+$gradient-accent: linear-gradient(135deg, $accent-color 0%, $accent-dark 100%) !default;
+$gradient-success: linear-gradient(135deg, $success-color 0%, #20c997 100%) !default;
+$gradient-gold: linear-gradient(135deg, $gold-color 0%, $gold-light 100%) !default;
+$gradient-warning: linear-gradient(135deg, $warning-color 0%, #ff9800 100%) !default;
+
+// Backgrounds
+$bg-overlay: rgba(0, 0, 0, 0.8) !default;
+$bg-glass: rgba(255, 255, 255, 0.1) !default;
+$bg-glass-hover: rgba(255, 255, 255, 0.2) !default;
+
+// Spacing (sistema de 8px)
+$spacing-xs: 0.25rem !default; // 4px
+$spacing-sm: 0.5rem !default;  // 8px
+$spacing-md: 1rem !default;    // 16px
+$spacing-lg: 1.5rem !default;  // 24px
+$spacing-xl: 2rem !default;    // 32px
+$spacing-xxl: 3rem !default;   // 48px
+
+// Tamanhos de fonte
+$font-size-xs: 0.75rem !default;
+$font-size-sm: 0.875rem !default;
+$font-size-base: 1rem !default;
+$font-size-lg: 1.125rem !default;
+$font-size-xl: 1.25rem !default;
+$font-size-xxl: 1.5rem !default;
+
+// Border radius
+$border-radius-sm: 8px !default;
+$border-radius-md: 12px !default;
+$border-radius-lg: 15px !default;
+$border-radius-xl: 20px !default;
+$border-radius-round: 50% !default;
+
+// Shadows
+$shadow-sm: 0 4px 15px rgba(0, 0, 0, 0.1) !default;
+$shadow-md: 0 8px 25px rgba(0, 0, 0, 0.15) !default;
+$shadow-lg: 0 15px 35px rgba(0, 0, 0, 0.25) !default;
+$shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.4) !default;
+
+// Transições
+$transition-fast: 0.2s ease !default;
+$transition-normal: 0.3s ease !default;
+$transition-slow: 0.5s ease !default;
+
+// Z-index
+$z-dropdown: 100 !default;
+$z-modal: 1000 !default;
+$z-tooltip: 2000 !default;
+$z-overlay: 3000 !default;
+
+// Breakpoints
+$breakpoint-sm: 480px !default;
+$breakpoint-md: 768px !default;
+$breakpoint-lg: 1024px !default;
+$breakpoint-xl: 1200px !default;
