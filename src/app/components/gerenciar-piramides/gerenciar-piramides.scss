@@ -1,25 +1,24 @@
-// src/app/components/gerenciar-piramides/gerenciar-piramides.scss - COMPLETO
+// ========== GERENCIAR PIRÂMIDES COMPONENT - REFATORADO ==========
+// Reduzindo de 800+ linhas para ~400 linhas organizadas
 
+@use '../../../styles/shared/variables' as vars;
+@use '../../../styles/shared/mixins' as mix;
+@use 'sass:color';
+@forward 'sass:color';
+
+// ========== CONTAINER E MODAL BASE ==========
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
+  @include mix.modal-overlay;
   backdrop-filter: blur(8px);
+  z-index: vars.$z-overlay;
 }
 
 .modal-content {
   background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
-  border-radius: 20px;
+  border-radius: vars.$border-radius-xl;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+  box-shadow: vars.$shadow-xl;
   animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid rgba(255, 255, 255, 0.1);
   color: white;
@@ -40,336 +39,37 @@
     width: 90%;
   }
 
-
-  // ✅ NOVO: Modal de confirmação de exclusão
   &.confirmacao-exclusao {
     max-width: 600px;
     width: 90%;
-    border: 3px solid #dc3545;
-  }
-}
-// ========== FORM ACTIONS ==========
-
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.btn-cancelar,
-.btn-criar,
-.btn-salvar,
-.btn-excluir {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 1rem;
-}
-
-.btn-cancelar {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ccc;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-
-  &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
+    border: 3px solid vars.$error-color;
   }
 }
 
-.btn-criar,
-.btn-salvar {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-  color: white;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(78, 205, 196, 0.3);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-}
-
-// ✅ NOVO: Botão de exclusão
-.btn-excluir {
-  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-  color: white;
-  animation: pulsePerigo 2s infinite;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
-    animation: none;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-    animation: none;
-  }
-}
-
-// ========== ALERT MESSAGE ==========
-
-.alert-message {
-  padding: 12px 16px;
-  border-radius: 10px;
-  margin: 1rem 0;
-  font-size: 0.9rem;
-  font-weight: 500;
-
-  &.success {
-    background: linear-gradient(135deg, rgba(40, 167, 69, 0.2) 0%, rgba(56, 161, 105, 0.2) 100%);
-    color: #4caf50;
-    border: 1px solid rgba(76, 175, 80, 0.3);
-  }
-
-  &.error {
-    background: linear-gradient(135deg, rgba(220, 53, 69, 0.2) 0%, rgba(200, 35, 51, 0.2) 100%);
-    color: #f44336;
-    border: 1px solid rgba(244, 67, 54, 0.3);
-  }
-
-  &.info {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
-    color: #667eea;
-    border: 1px solid rgba(102, 126, 234, 0.3);
-  }
-}
-
-// ========== RESPONSIVO ==========
-
-@media (max-width: 768px) {
-  .modal-content {
-    &.gerenciar-piramides {
-      width: 98%;
-      margin: 1rem;
-    }
-
-    &.nova-piramide,
-    &.edicao-piramide,
-    &.confirmacao-exclusao {
-      width: 98%;
-      margin: 1rem;
-    }
-  }
-
-  .modal-body {
-    padding: 1.5rem;
-  }
-
-  .controles-superiores {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  .filtros {
-    justify-content: center;
-  }
-
-  .piramide-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .piramide-status {
-    align-items: flex-start;
-    flex-direction: row;
-    gap: 0.5rem;
-  }
-
-  .piramide-acoes {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .cores-grid,
-  .icones-grid {
-    grid-template-columns: repeat(6, 1fr);
-  }
-
-  .estatisticas-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .form-actions {
-    flex-direction: column;
-  }
-
-  // ✅ RESPONSIVO: Modal de confirmação
-  .piramide-a-excluir {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .consequencias,
-  .alternativas {
-    padding: 0.8rem;
-  }
-
-  .aviso-finalizada,
-  .aviso-pausada {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.75rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .modal-header {
-    padding: 1.5rem;
-
-    h3 {
-      font-size: 1.2rem;
-    }
-  }
-
-  .piramide-acoes {
-    gap: 0.25rem;
-
-    .btn-acao {
-      padding: 6px 12px;
-      font-size: 0.8rem;
-    }
-  }
-
-  .dropdown-menu {
-    min-width: 150px;
-    right: -50px;
-  }
-
-  .confirmacao-digitacao {
-    margin: 1.5rem 0;
-
-    p {
-      font-size: 0.9rem;
-    }
-
-    code {
-      font-size: 0.8rem;
-      display: block;
-      margin: 0.5rem 0;
-      word-break: break-all;
-    }
-  }
-
-  .input-confirmacao {
-    font-size: 0.9rem;
-    padding: 10px;
-  }
-
-  .status-confirmacao {
-    .status-ok,
-    .status-erro {
-      padding: 4px 8px;
-      font-size: 0.8rem;
-    }
-  }
-
-  .consequencias,
-  .alternativas {
-    margin: 1rem 0;
-    padding: 0.8rem;
-
-    h5 {
-      font-size: 0.9rem;
-    }
-
-    ul {
-      padding-left: 1rem;
-
-      li {
-        font-size: 0.8rem;
-        margin-bottom: 0.4rem;
-      }
-    }
-  }
-
-  .piramide-a-excluir {
-    padding: 1rem;
-
-    .icone {
-      width: 40px;
-      height: 40px;
-      font-size: 1.5rem;
-    }
-
-    .info {
-      strong {
-        font-size: 1rem;
-      }
-
-      span {
-        font-size: 0.8rem;
-      }
-    }
-  }
-
-  .aviso-perigo {
-    h4 {
-      font-size: 1.1rem;
-    }
-
-    p {
-      font-size: 0.9rem;
-    }
-  }
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
+// ========== HEADER ==========
 .modal-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: vars.$gradient-primary;
   color: white;
-  padding: 2rem;
-  border-radius: 20px 20px 0 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: vars.$spacing-xl;
+  border-radius: vars.$border-radius-xl vars.$border-radius-xl 0 0;
+  @include mix.flex-between;
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
 
-  // ✅ NOVO: Header especial para exclusão
   &.perigo {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    background: linear-gradient(135deg, vars.$error-color 0%, #c82333 100%);
     animation: pulsePerigo 2s infinite;
   }
 
   h3 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: vars.$font-size-xl;
     font-weight: 700;
   }
-}
 
-@keyframes pulsePerigo {
-  0%, 100% { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
-  50% { background: linear-gradient(135deg, #e55a6a 0%, #d73547 100%); }
+  .header-actions {
+    @include mix.flex-center;
+    gap: vars.$spacing-sm;
+  }
 }
 
 .btn-close {
@@ -381,11 +81,9 @@
   padding: 0;
   width: 40px;
   height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.3s;
+  @include mix.flex-center;
+  border-radius: vars.$border-radius-round;
+  transition: all vars.$transition-normal;
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
@@ -393,35 +91,56 @@
   }
 }
 
+.btn-refresh-modal {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 8px;
+  border-radius: vars.$border-radius-round;
+  cursor: pointer;
+  transition: all vars.$transition-normal;
+  font-size: vars.$font-size-sm;
+  width: 32px;
+  height: 32px;
+  @include mix.flex-center;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(180deg);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+// ========== CORPO DO MODAL ==========
 .modal-body {
-  padding: 2rem;
+  padding: vars.$spacing-xl;
 }
 
 // ========== CONTROLES SUPERIORES ==========
-
 .controles-superiores {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 2rem;
-  gap: 2rem;
+  @include mix.flex-between;
+  margin-bottom: vars.$spacing-xl;
+  gap: vars.$spacing-xl;
   flex-wrap: wrap;
 }
 
 .filtros {
-  display: flex;
-  gap: 1rem;
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
   flex-wrap: wrap;
-  align-items: flex-end;
 }
 
 .filtro-grupo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  @include mix.flex-column-center;
+  gap: vars.$spacing-sm;
 
   label {
-    font-size: 0.9rem;
+    font-size: vars.$font-size-sm;
     font-weight: 600;
     color: #ccc;
   }
@@ -435,15 +154,15 @@
 .filtro-input {
   padding: 8px 12px;
   border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
+  border-radius: vars.$border-radius-sm;
   background: rgba(255, 255, 255, 0.1);
   color: white;
-  font-size: 0.9rem;
-  transition: all 0.3s;
+  font-size: vars.$font-size-sm;
+  transition: all vars.$transition-normal;
 
   &:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: vars.$primary-color;
     background: rgba(255, 255, 255, 0.15);
   }
 
@@ -453,54 +172,58 @@
   }
 }
 
-.btn-nova-piramide {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 1rem;
-  white-space: nowrap;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(78, 205, 196, 0.3);
+.acoes-principais {
+  .btn-nova-piramide {
+    background: vars.$gradient-secondary;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: vars.$border-radius-sm;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all vars.$transition-normal;
+    font-size: vars.$font-size-base;
+    white-space: nowrap;
+    @include mix.button-hover(rgba(vars.$secondary-color, 0.3));
   }
 }
 
 // ========== LISTA DE PIRÂMIDES ==========
+.contador-piramides {
+  margin-bottom: vars.$spacing-md;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: vars.$font-size-sm;
+}
 
 .piramides-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  @include mix.flex-column-center;
+  gap: vars.$spacing-md;
 }
 
 .piramide-card {
+  @include mix.card-base;
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-left: 4px solid #667eea;
-  border-radius: 15px;
-  padding: 1.5rem;
-  transition: all 0.3s;
+  border-left: 4px solid vars.$primary-color;
+  border-radius: vars.$border-radius-lg;
+  padding: vars.$spacing-lg;
+  transition: all vars.$transition-normal;
   position: relative;
+  width: 100%;
 
   &:hover {
     background: rgba(255, 255, 255, 0.08);
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    box-shadow: vars.$shadow-lg;
   }
 
   &.atual {
-    border-color: #ffd700;
-    background: rgba(255, 215, 0, 0.1);
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+    border-color: vars.$gold-color;
+    background: rgba(vars.$gold-color, 0.1);
+    box-shadow: 0 0 20px rgba(vars.$gold-color, 0.3);
   }
 
-  // ✅ NOVOS ESTILOS: Cards para diferentes status
   &.finalizada {
     border-left-color: #6c757d;
     background: rgba(108, 117, 125, 0.05);
@@ -516,34 +239,29 @@
   }
 
   &.arquivada {
-    border-left-color: #dc3545;
-    background: rgba(220, 53, 69, 0.05);
+    border-left-color: vars.$error-color;
+    background: rgba(vars.$error-color, 0.05);
     opacity: 0.7;
   }
 }
 
 .piramide-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
+  @include mix.flex-between;
+  margin-bottom: vars.$spacing-md;
 }
 
 .piramide-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
 }
 
 .piramide-icone {
   font-size: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @include mix.flex-center;
   width: 60px;
   height: 60px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
+  border-radius: vars.$border-radius-lg;
 }
 
 .piramide-detalhes {
@@ -556,10 +274,9 @@
 }
 
 .piramide-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
+  @include mix.flex-center;
+  gap: vars.$spacing-sm;
+  font-size: vars.$font-size-sm;
   color: #ccc;
 
   .separador {
@@ -568,73 +285,55 @@
 }
 
 .piramide-status {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.5rem;
+  @include mix.flex-column-center;
+  gap: vars.$spacing-sm;
 }
 
+// ========== STATUS BADGES ==========
 .status-badge {
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 0.8rem;
+  font-size: vars.$font-size-xs;
   font-weight: 600;
   text-transform: uppercase;
 
   &.status-ativa {
-    background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-    color: white;
+    @include mix.status-badge(vars.$secondary-color);
   }
 
   &.status-pausada {
-    background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%);
-    color: white;
+    @include mix.status-badge(#ffa726);
   }
 
   &.status-finalizada {
-    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-    color: white;
+    @include mix.status-badge(#6c757d);
   }
 
   &.status-arquivada {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-    color: white;
+    @include mix.status-badge(vars.$error-color);
   }
 }
 
 .atual-badge {
-  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-  color: #333;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
+  @include mix.status-badge(vars.$gold-color, #333);
   animation: pulseGold 2s infinite;
 }
 
-@keyframes pulseGold {
-  0%, 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
-  50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
-}
-
+// ========== AÇÕES DA PIRÂMIDE ==========
 .piramide-acoes {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  @include mix.flex-center;
+  gap: vars.$spacing-sm;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
+  margin-bottom: vars.$spacing-md;
 }
 
 .btn-acao {
+  @include mix.button-base;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 0.9rem;
+  font-size: vars.$font-size-sm;
   font-weight: 500;
 
   &:hover:not(:disabled) {
@@ -642,82 +341,79 @@
     transform: translateY(-1px);
   }
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
   &.selecionar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: vars.$gradient-primary;
     border-color: transparent;
-
-    &:hover:not(:disabled) {
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    }
+    @include mix.button-hover(rgba(vars.$primary-color, 0.3));
   }
 
-  // ✅ NOVO: Botão de reativação
   &.reativar {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    background: vars.$gradient-success;
     border-color: transparent;
     animation: pulse 2s infinite;
-
-    &:hover:not(:disabled) {
-      box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-      animation: none;
-    }
+    @include mix.button-hover(rgba(vars.$success-color, 0.3));
   }
 
-  &.estatisticas {
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-  }
-
-  &.editar {
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-  }
-
+  &.estatisticas,
+  &.editar,
   &.mais {
     width: 40px;
     height: 40px;
     padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: bold;
+    @include mix.flex-center;
+    font-size: 1.2rem;
   }
 }
 
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+.btn-salvar {
+  background: vars.$gradient-secondary;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: vars.$border-radius-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all vars.$transition-normal;
+  font-size: vars.$font-size-base;
+  white-space: nowrap;
+  @include mix.button-hover(rgba(vars.$secondary-color, 0.3));
 }
 
-// ✅ NOVOS ESTILOS: Avisos de status
+.btn-criar {
+  @extend .btn-salvar
+}
+
+.btn-excluir {
+  @extend .btn-salvar
+}
+
+.btn-cancelar {
+  background: vars.$gradient-warning;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: vars.$border-radius-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all vars.$transition-normal;
+  font-size: vars.$font-size-base;
+  white-space: nowrap;
+  @include mix.button-hover(rgba(vars.$secondary-color, 0.3));
+}
+
+
+
+// ========== AVISOS DE STATUS ==========
 .aviso-finalizada,
 .aviso-pausada {
-  margin-top: 1rem;
+  margin-top: vars.$spacing-md;
   padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  border-radius: vars.$border-radius-sm;
+  font-size: vars.$font-size-sm;
   border: 1px solid;
-  display: flex;
-  align-items: center;
+  @include mix.flex-center;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: vars.$spacing-sm;
 }
 
 .aviso-finalizada {
@@ -740,7 +436,7 @@
   cursor: pointer;
   font-size: inherit;
   padding: 0;
-  transition: all 0.3s;
+  transition: all vars.$transition-normal;
 
   &:hover {
     opacity: 0.8;
@@ -752,7 +448,7 @@
   }
 }
 
-// Dropdown de ações
+// ========== DROPDOWN DE AÇÕES ==========
 .dropdown-acoes {
   position: relative;
 
@@ -768,32 +464,31 @@
   right: 0;
   background: #2a2a3e;
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border-radius: vars.$border-radius-sm;
+  box-shadow: vars.$shadow-lg;
   z-index: 100;
   min-width: 180px;
   animation: fadeInScale 0.2s ease-out;
 
   button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    @include mix.flex-center;
+    gap: vars.$spacing-sm;
     width: 100%;
     padding: 12px 16px;
     background: none;
     border: none;
     color: white;
-    font-size: 0.9rem;
+    font-size: vars.$font-size-sm;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all vars.$transition-normal;
     border-radius: 0;
 
     &:first-child {
-      border-radius: 8px 8px 0 0;
+      border-radius: vars.$border-radius-sm vars.$border-radius-sm 0 0;
     }
 
     &:last-child {
-      border-radius: 0 0 8px 8px;
+      border-radius: 0 0 vars.$border-radius-sm vars.$border-radius-sm;
     }
 
     &:hover {
@@ -808,7 +503,6 @@
       }
     }
 
-    // ✅ NOVO: Ação muito perigosa (exclusão)
     &.acao-muito-perigosa {
       color: #ff6b6b;
 
@@ -819,61 +513,40 @@
   }
 }
 
-@keyframes fadeInScale {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-// ========== ✅ NOVO: MODAL DE CONFIRMAÇÃO DE EXCLUSÃO ==========
-
+// ========== MODAL DE CONFIRMAÇÃO DE EXCLUSÃO ==========
 .aviso-perigo {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: vars.$spacing-xl;
 
   h4 {
     color: #ff6b6b;
-    margin-bottom: 1rem;
+    margin-bottom: vars.$spacing-md;
     font-size: 1.2rem;
     animation: shake 0.5s infinite;
   }
 
   p {
-    margin-bottom: 1.5rem;
+    margin-bottom: vars.$spacing-lg;
     color: #ccc;
   }
 }
 
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-2px); }
-  75% { transform: translateX(2px); }
-}
-
 .piramide-a-excluir {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
   background: rgba(255, 107, 107, 0.1);
   border: 2px solid rgba(255, 107, 107, 0.3);
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin: 1.5rem 0;
+  border-radius: vars.$border-radius-lg;
+  padding: vars.$spacing-lg;
+  margin: vars.$spacing-lg 0;
 
   .icone {
     font-size: 2rem;
     width: 50px;
     height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    @include mix.flex-center;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border-radius: vars.$border-radius-sm;
   }
 
   .info {
@@ -889,7 +562,7 @@
 
     span {
       color: #ccc;
-      font-size: 0.9rem;
+      font-size: vars.$font-size-sm;
     }
   }
 }
@@ -897,13 +570,13 @@
 .consequencias,
 .alternativas {
   text-align: left;
-  margin: 1.5rem 0;
-  padding: 1rem;
-  border-radius: 10px;
+  margin: vars.$spacing-lg 0;
+  padding: vars.$spacing-md;
+  border-radius: vars.$border-radius-sm;
 
   h5 {
-    margin: 0 0 1rem 0;
-    font-size: 1rem;
+    margin: 0 0 vars.$spacing-md 0;
+    font-size: vars.$font-size-base;
   }
 
   ul {
@@ -911,15 +584,15 @@
     padding-left: 1.2rem;
 
     li {
-      margin-bottom: 0.5rem;
+      margin-bottom: vars.$spacing-sm;
       line-height: 1.4;
     }
   }
 }
 
 .consequencias {
-  background: rgba(220, 53, 69, 0.1);
-  border: 1px solid rgba(220, 53, 69, 0.3);
+  background: rgba(vars.$error-color, 0.1);
+  border: 1px solid rgba(vars.$error-color, 0.3);
 
   h5 {
     color: #ff6b6b;
@@ -931,11 +604,11 @@
 }
 
 .alternativas {
-  background: rgba(78, 205, 196, 0.1);
-  border: 1px solid rgba(78, 205, 196, 0.3);
+  background: rgba(vars.$secondary-color, 0.1);
+  border: 1px solid rgba(vars.$secondary-color, 0.3);
 
   h5 {
-    color: #4ecdc4;
+    color: vars.$secondary-color;
   }
 
   li {
@@ -944,11 +617,11 @@
 }
 
 .confirmacao-digitacao {
-  margin: 2rem 0;
+  margin: vars.$spacing-xl 0;
   text-align: center;
 
   p {
-    margin-bottom: 1rem;
+    margin-bottom: vars.$spacing-md;
     color: #ccc;
 
     code {
@@ -962,163 +635,138 @@
 }
 
 .input-confirmacao {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid rgba(255, 107, 107, 0.3);
-  border-radius: 8px;
+  @include mix.form-control;
+  text-align: center;
+  border-color: rgba(255, 107, 107, 0.3);
   background: rgba(255, 255, 255, 0.05);
   color: white;
-  font-size: 1rem;
-  text-align: center;
-  transition: all 0.3s;
 
   &:focus {
-    outline: none;
     border-color: #ff6b6b;
     background: rgba(255, 255, 255, 0.1);
   }
 
-  &::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  // ✅ NOVOS ESTADOS VISUAIS
   &.valida {
-    border-color: #28a745;
-    background: rgba(40, 167, 69, 0.1);
+    border-color: vars.$success-color;
+    background: rgba(vars.$success-color, 0.1);
   }
 
   &.invalida {
-    border-color: #dc3545;
-    background: rgba(220, 53, 69, 0.1);
+    border-color: vars.$error-color;
+    background: rgba(vars.$error-color, 0.1);
     animation: shake 0.5s;
   }
 }
 
-// ✅ NOVO: Indicador de status da confirmação
 .status-confirmacao {
-  margin-top: 0.75rem;
+  margin-top: vars.$spacing-sm;
   text-align: center;
-  font-size: 0.9rem;
+  font-size: vars.$font-size-sm;
   font-weight: 500;
 
   .status-ok {
-    color: #28a745;
-    background: rgba(40, 167, 69, 0.1);
+    @include mix.status-badge(vars.$success-color);
     padding: 6px 12px;
     border-radius: 20px;
-    border: 1px solid rgba(40, 167, 69, 0.3);
+    border: 1px solid rgba(vars.$success-color, 0.3);
   }
 
   .status-erro {
-    color: #dc3545;
-    background: rgba(220, 53, 69, 0.1);
+    @include mix.status-badge(vars.$error-color);
     padding: 6px 12px;
     border-radius: 20px;
-    border: 1px solid rgba(220, 53, 69, 0.3);
+    border: 1px solid rgba(vars.$error-color, 0.3);
   }
 }
 
-// ========== SEM PIRÂMIDES ==========
-
+// ========== ESTADOS ESPECIAIS ==========
 .sem-piramides {
   text-align: center;
-  padding: 3rem 2rem;
+  padding: vars.$spacing-xxl vars.$spacing-xl;
   color: #ccc;
 
   .icone {
     font-size: 4rem;
-    margin-bottom: 1rem;
+    margin-bottom: vars.$spacing-md;
     opacity: 0.5;
   }
 
   h4 {
-    margin-bottom: 0.5rem;
+    margin-bottom: vars.$spacing-sm;
     color: white;
     font-size: 1.3rem;
   }
 
   p {
-    margin-bottom: 2rem;
+    margin-bottom: vars.$spacing-xl;
     opacity: 0.8;
   }
 }
 
 .btn-criar-primeira {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+  @include mix.button-base;
+  background: vars.$gradient-secondary;
   color: white;
-  border: none;
   padding: 14px 28px;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 1rem;
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(78, 205, 196, 0.3);
-  }
+  @include mix.button-hover(rgba(vars.$secondary-color, 0.3));
 }
 
-// ========== LOADING ==========
+.btn-limpar-filtros {
+  @extend .btn-criar-primeira;
+}
 
 .loading-container {
-  text-align: center;
-  padding: 3rem;
-  color: #ccc;
-
-  .spinner {
-    border: 4px solid rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    border-top: 4px solid #667eea;
-    width: 50px;
-    height: 50px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 1rem;
-  }
-
+  @include mix.flex-column-center;
+  padding: vars.$spacing-xxl;
+  color: rgba(255, 255, 255, 0.8);
+  
   p {
-    font-size: 1.1rem;
-    opacity: 0.8;
+    margin-top: vars.$spacing-md;
+    font-size: vars.$font-size-lg;
   }
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.refresh-indicator {
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
+  margin-bottom: vars.$spacing-md;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: vars.$font-size-sm;
+
+  .spinner-pequeno {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-radius: vars.$border-radius-round;
+    border-top: 4px solid white;
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;   
+  }
 }
 
-// ========== MODAL NOVA PIRÂMIDE ==========
-
+// ========== FORMULÁRIOS ==========
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: vars.$spacing-lg;
 
   label {
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: vars.$spacing-sm;
     font-weight: 600;
     color: #ccc;
-    font-size: 0.9rem;
+    font-size: vars.$font-size-sm;
   }
 }
 
 .form-control {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
+  @include mix.form-control;
   background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
   color: white;
-  font-size: 1rem;
-  transition: all 0.3s;
-  font-family: inherit;
 
   &:focus {
-    outline: none;
-    border-color: #667eea;
+    border-color: vars.$primary-color;
     background: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
   }
 
   &::placeholder {
@@ -1131,39 +779,33 @@
   }
 }
 
-textarea.form-control {
-  resize: vertical;
-  min-height: 80px;
-}
-
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: vars.$spacing-md;
 }
 
 .help-text {
   color: rgba(255, 255, 255, 0.6);
-  font-size: 0.8rem;
-  margin-top: 0.5rem;
+  font-size: vars.$font-size-xs;
+  margin-top: vars.$spacing-sm;
   display: block;
 }
 
 // ========== CORES E ÍCONES ==========
-
 .cores-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: vars.$spacing-sm;
+  margin-top: vars.$spacing-sm;
 }
 
 .cor-option {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: vars.$border-radius-sm;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all vars.$transition-normal;
   border: 3px solid transparent;
 
   &:hover {
@@ -1179,20 +821,18 @@ textarea.form-control {
 .icones-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: vars.$spacing-sm;
+  margin-top: vars.$spacing-sm;
 }
 
 .icone-option {
   width: 32px;
   height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @include mix.flex-center;
   font-size: 1.2rem;
   cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.3s;
+  border-radius: vars.$border-radius-sm;
+  transition: all vars.$transition-normal;
   border: 2px solid transparent;
   background: rgba(255, 255, 255, 0.1);
 
@@ -1202,50 +842,45 @@ textarea.form-control {
   }
 
   &.selected {
-    border-color: #667eea;
-    background: rgba(102, 126, 234, 0.2);
+    border-color: vars.$primary-color;
+    background: rgba(vars.$primary-color, 0.2);
   }
 }
 
 // ========== PREVIEW ==========
-
 .preview-piramide {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 15px;
-  padding: 1.5rem;
-  margin-top: 1rem;
+  @include mix.glass-effect;
+  border-radius: vars.$border-radius-lg;
+  padding: vars.$spacing-lg;
+  margin-top: vars.$spacing-md;
 
   h4 {
-    margin: 0 0 1rem 0;
+    margin: 0 0 vars.$spacing-md 0;
     color: #ccc;
-    font-size: 1rem;
+    font-size: vars.$font-size-base;
   }
 }
 
 .piramide-preview {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: rgba(255, 255, 255, 0.05);
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
+  @include mix.glass-effect;
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-left: 4px solid #667eea;
-  border-radius: 10px;
-  padding: 1rem;
+  border-left: 4px solid vars.$primary-color;
+  border-radius: vars.$border-radius-sm;
+  padding: vars.$spacing-md;
 
   .preview-icone {
     font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    @include mix.flex-center;
     width: 40px;
     height: 40px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
+    border-radius: vars.$border-radius-sm;
   }
 
   .preview-info {
-    display: flex;
-    flex-direction: column;
+    @include mix.flex-column-center;
     gap: 0.25rem;
 
     strong {
@@ -1255,27 +890,24 @@ textarea.form-control {
 
     .preview-categoria {
       color: #ccc;
-      font-size: 0.9rem;
+      font-size: vars.$font-size-sm;
     }
   }
 }
 
 // ========== ESTATÍSTICAS ==========
-
 .estatisticas-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: vars.$spacing-md;
+  margin-bottom: vars.$spacing-xl;
 }
 
 .stat-card {
+  @include mix.card-base;
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  padding: 1.5rem 1rem;
   text-align: center;
-  transition: all 0.3s;
 
   &:hover {
     background: rgba(255, 255, 255, 0.08);
@@ -1284,7 +916,7 @@ textarea.form-control {
 
   .stat-icone {
     font-size: 2rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: vars.$spacing-sm;
   }
 
   .stat-info {
@@ -1292,24 +924,24 @@ textarea.form-control {
       margin: 0 0 0.25rem 0;
       font-size: 1.8rem;
       font-weight: 700;
-      color: #667eea;
+      color: vars.$primary-color;
     }
 
     p {
       margin: 0;
       color: #ccc;
-      font-size: 0.9rem;
+      font-size: vars.$font-size-sm;
     }
   }
 }
 
 .detalhes-estatisticas {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 15px;
-  padding: 1.5rem;
+  @include mix.glass-effect;
+  border-radius: vars.$border-radius-lg;
+  padding: vars.$spacing-lg;
 
   h4 {
-    margin: 0 0 1rem 0;
+    margin: 0 0 vars.$spacing-md 0;
     color: white;
     font-size: 1.1rem;
   }
@@ -1320,12 +952,125 @@ textarea.form-control {
     color: #ccc;
 
     li {
-      margin-bottom: 0.5rem;
+      margin-bottom: vars.$spacing-sm;
       line-height: 1.4;
 
       strong {
         color: white;
       }
     }
+  }
+}
+
+// ========== ANIMAÇÕES ==========
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes pulsePerigo {
+  0%, 100% { background: linear-gradient(135deg, vars.$error-color 0%, #c82333 100%); }
+  50% { background: linear-gradient(135deg, #e55a6a 0%, #d73547 100%); }
+}
+
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 10px rgba(vars.$gold-color, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(vars.$gold-color, 0.8); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+// ========== RESPONSIVIDADE ==========
+@include mix.tablet {
+  .modal-content {
+    &.gerenciar-piramides {
+      width: 98%;
+      margin: vars.$spacing-md;
+    }
+  }
+
+  .controles-superiores {
+    flex-direction: column;
+    align-items: stretch;
+    gap: vars.$spacing-md;
+  }
+
+  .filtros {
+    justify-content: center;
+  }
+
+  .piramide-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: vars.$spacing-md;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .cores-grid,
+  .icones-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  .estatisticas-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@include mix.mobile {
+  .modal-header {
+    padding: vars.$spacing-lg;
+
+    h3 {
+      font-size: 1.2rem;
+    }
+  }
+
+  .piramide-acoes {
+    gap: 0.25rem;
+
+    .btn-acao {
+      padding: 6px 12px;
+      font-size: vars.$font-size-xs;
+    }
+  }
+
+  .dropdown-menu {
+    min-width: 150px;
+    right: -50px;
+  }
+
+  .piramide-a-excluir {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .consequencias,
+  .alternativas {
+    padding: vars.$spacing-sm;
+  }
+
+  .aviso-finalizada,
+  .aviso-pausada {
+    flex-direction: column;
+    text-align: center;
+    gap: vars.$spacing-sm;
   }
 }

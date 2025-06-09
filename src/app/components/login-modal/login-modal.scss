@@ -1,49 +1,28 @@
-// src/app/components/login-modal/login-modal.scss - COMPLETO COM FIREBASE
+// ========== LOGIN MODAL COMPONENT - REFATORADO ==========
+// Reduzindo de 300+ linhas para ~150 linhas organizadas
 
+@use '../../../styles/shared/variables' as vars;
+@use '../../../styles/shared/mixins' as mix;
+@use 'sass:color';
+@forward 'sass:color';
+
+// ========== MODAL BASE ==========
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
+  @include mix.modal-overlay;
   backdrop-filter: blur(5px);
 }
 
 .modal-content {
-  background: white;
-  border-radius: 20px;
-  max-width: 450px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  @include mix.modal-content(450px);
   animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-50px) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 .modal-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: vars.$gradient-primary;
   color: white;
-  padding: 2rem;
-  border-radius: 20px 20px 0 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: vars.$spacing-xl;
+  border-radius: vars.$border-radius-xl vars.$border-radius-xl 0 0;
+  @include mix.flex-between;
 
   h3 {
     margin: 0;
@@ -61,11 +40,9 @@
   padding: 0;
   width: 35px;
   height: 35px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.3s;
+  @include mix.flex-center;
+  border-radius: vars.$border-radius-round;
+  transition: all vars.$transition-normal;
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
@@ -73,84 +50,140 @@
   }
 }
 
+// ========== CORPO DO MODAL ==========
 .modal-body {
-  padding: 2rem;
+  padding: vars.$spacing-xl;
 }
 
 .subtitle {
   text-align: center;
   color: #666;
-  margin-bottom: 2rem;
-  font-size: 1rem;
+  margin-bottom: vars.$spacing-xl;
+  font-size: vars.$font-size-base;
 }
 
+// ========== FORMULÁRIO ==========
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: vars.$spacing-lg;
 }
 
 label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: vars.$spacing-sm;
   font-weight: 600;
   color: #333;
-  font-size: 0.9rem;
+  font-size: vars.$font-size-sm;
 }
 
 .form-control {
-  width: 100%;
-  padding: 14px;
-  border: 2px solid #e0e6ed;
-  border-radius: 10px;
-  font-size: 1rem;
-  transition: all 0.3s;
+  @include mix.form-control;
   background: #f8f9fa;
 
   &:focus {
-    outline: none;
-    border-color: #667eea;
+    border-color: vars.$primary-color;
     background: white;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
+    box-shadow: 0 0 0 3px rgba(vars.$primary-color, 0.1);
   }
 }
 
+// ========== INSTRUÇÕES FIREBASE ==========
+.firebase-instructions {
+  background: linear-gradient(135deg, rgba(vars.$warning-color, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%);
+  border: 2px solid rgba(vars.$warning-color, 0.3);
+  border-radius: vars.$border-radius-lg;
+  padding: vars.$spacing-lg;
+  margin: vars.$spacing-lg 0;
+
+  h4 {
+    margin: 0 0 vars.$spacing-md 0;
+    color: #ff9500;
+    font-size: 1.1rem;
+  }
+
+  p {
+    margin-bottom: vars.$spacing-md;
+    color: #666;
+    font-size: vars.$font-size-sm;
+  }
+}
+
+.instructions-steps {
+  h5 {
+    margin: vars.$spacing-md 0 vars.$spacing-sm 0;
+    color: vars.$primary-color;
+    font-size: vars.$font-size-base;
+  }
+
+  ol {
+    margin: 0 0 vars.$spacing-lg 1.2rem;
+    padding: 0;
+
+    li {
+      margin-bottom: vars.$spacing-sm;
+      font-size: 0.85rem;
+      line-height: 1.4;
+
+      code {
+        background: rgba(vars.$primary-color, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: vars.$primary-color;
+        font-weight: 600;
+      }
+
+      strong {
+        color: #333;
+        font-weight: 600;
+      }
+    }
+  }
+
+  a {
+    color: vars.$primary-color;
+    text-decoration: none;
+    font-weight: 600;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.btn-instructions {
+  @include mix.button-base;
+  background: vars.$gradient-primary;
+  color: white;
+  padding: 10px 20px;
+  font-size: vars.$font-size-sm;
+  width: 100%;
+  @include mix.button-hover(rgba(vars.$primary-color, 0.3));
+}
+
+// ========== MESSAGES ==========
 .error-message {
   background: #ffe6e6;
   color: #d63031;
   padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
+  border-radius: vars.$border-radius-sm;
+  margin-bottom: vars.$spacing-lg;
+  font-size: vars.$font-size-sm;
   border: 1px solid #ffc9c9;
   text-align: center;
   animation: shake 0.5s;
 }
 
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
-}
-
+// ========== AÇÕES DO FORMULÁRIO ==========
 .form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
+  margin-bottom: vars.$spacing-xl;
 }
 
 .btn-cancelar, .btn-login {
+  @include mix.button-base;
   flex: 1;
   padding: 14px;
-  border: none;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 1rem;
+  font-size: vars.$font-size-base;
 }
 
 .btn-cancelar {
@@ -165,13 +198,9 @@ label {
 }
 
 .btn-login {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: vars.$gradient-primary;
   color: white;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-  }
+  @include mix.button-hover(rgba(vars.$primary-color, 0.3));
 }
 
 .btn-login:disabled, .btn-cancelar:disabled {
@@ -180,145 +209,77 @@ label {
   transform: none;
 }
 
+// ========== INFO BOX ==========
 .info-box {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-  border-radius: 15px;
-  padding: 1.5rem;
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  background: linear-gradient(135deg, rgba(vars.$primary-color, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: vars.$border-radius-lg;
+  padding: vars.$spacing-lg;
+  border: 1px solid rgba(vars.$primary-color, 0.2);
 
   h4 {
-    margin-bottom: 1rem;
-    color: #667eea;
-    font-size: 1rem;
+    margin-bottom: vars.$spacing-md;
+    color: vars.$primary-color;
+    font-size: vars.$font-size-base;
   }
 
   p {
-    margin-bottom: 0.5rem;
+    margin-bottom: vars.$spacing-sm;
     font-size: 0.85rem;
     color: #555;
     line-height: 1.4;
   }
 }
 
-/* Estilos adicionais para integração Firebase */
-.firebase-instructions {
-  background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%);
-  border: 2px solid rgba(255, 193, 7, 0.3);
-  border-radius: 15px;
-  padding: 1.5rem;
-  margin: 1.5rem 0;
-
-  h4 {
-    margin: 0 0 1rem 0;
-    color: #ff9500;
-    font-size: 1.1rem;
-  }
-
-  p {
-    margin-bottom: 1rem;
-    color: #666;
-    font-size: 0.9rem;
-  }
-}
-
-.instructions-steps {
-  h5 {
-    margin: 1rem 0 0.5rem 0;
-    color: #667eea;
-    font-size: 1rem;
-  }
-
-  ol {
-    margin: 0 0 1.5rem 1.2rem;
-    padding: 0;
-
-    li {
-      margin-bottom: 0.5rem;
-      font-size: 0.85rem;
-      line-height: 1.4;
-
-      code {
-        background: rgba(102, 126, 234, 0.1);
-        padding: 2px 6px;
-        border-radius: 4px;
-        color: #667eea;
-        font-weight: 600;
-      }
-
-      strong {
-        color: #333;
-        font-weight: 600;
-      }
-    }
-  }
-
-  a {
-    color: #667eea;
-    text-decoration: none;
-    font-weight: 600;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-}
-
-.btn-instructions {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 0.9rem;
-  width: 100%;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
-}
-
 .firebase-status {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(102, 126, 234, 0.2);
+  margin-top: vars.$spacing-md;
+  padding-top: vars.$spacing-md;
+  border-top: 1px solid rgba(vars.$primary-color, 0.2);
 
   .status-badge {
+    @include mix.status-badge(transparent);
     padding: 3px 8px;
     border-radius: 12px;
     font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
 
     &.connected {
-      background: rgba(76, 175, 80, 0.2);
-      color: #4caf50;
+      background: rgba(vars.$success-color, 0.2);
+      color: vars.$success-color;
     }
 
     &.disconnected {
-      background: rgba(244, 67, 54, 0.2);
-      color: #f44336;
+      background: rgba(vars.$error-color, 0.2);
+      color: vars.$error-color;
     }
   }
 }
 
-@media (max-width: 480px) {
+// ========== ANIMAÇÕES ==========
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+// ========== RESPONSIVIDADE ==========
+@include mix.tablet {
   .modal-content {
     width: 95%;
-    margin: 1rem;
+    margin: vars.$spacing-md;
   }
   
   .modal-header, .modal-body {
-    padding: 1.5rem;
+    padding: vars.$spacing-lg;
   }
   
   .form-actions {
@@ -326,18 +287,18 @@ label {
   }
 
   .firebase-instructions {
-    padding: 1rem;
-    margin: 1rem 0;
+    padding: vars.$spacing-md;
+    margin: vars.$spacing-md 0;
 
     h4 {
-      font-size: 1rem;
+      font-size: vars.$font-size-base;
     }
 
     ol {
-      margin-left: 1rem;
+      margin-left: vars.$spacing-md;
 
       li {
-        font-size: 0.8rem;
+        font-size: vars.$font-size-xs;
       }
     }
   }
@@ -345,5 +306,27 @@ label {
   .btn-instructions {
     padding: 8px 16px;
     font-size: 0.85rem;
+  }
+}
+
+@include mix.mobile {
+  .modal-header, .modal-body {
+    padding: vars.$spacing-md;
+  }
+
+  .firebase-instructions {
+    padding: vars.$spacing-sm;
+
+    h4 {
+      font-size: vars.$font-size-sm;
+    }
+
+    ol li {
+      font-size: 0.75rem;
+    }
+  }
+
+  .btn-instructions {
+    font-size: vars.$font-size-xs;
   }
 }

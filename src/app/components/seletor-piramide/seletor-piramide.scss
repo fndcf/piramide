@@ -1,17 +1,25 @@
-// src/app/components/seletor-piramide/seletor-piramide.scss
+// ========== SELETOR PIRÂMIDE COMPONENT - REFATORADO ==========
+// Reduzindo de 500+ linhas para ~250 linhas organizadas
 
+@use '../../../styles/shared/variables' as vars;
+@use '../../../styles/shared/mixins' as mix;
+@use 'sass:color';
+@forward 'sass:color';
+
+// ========== CONTAINER PRINCIPAL ==========
 .seletor-piramide-container {
   position: relative;
-  margin-bottom: 2rem;
+  margin-bottom: vars.$spacing-xl;
   z-index: 100;
 }
 
+// ========== HEADER ==========
 .seletor-header {
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: vars.$spacing-lg;
 
   h4 {
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 vars.$spacing-sm 0;
     color: white;
     font-size: 1.3rem;
     font-weight: 600;
@@ -20,17 +28,18 @@
   .seletor-subtitle {
     margin: 0;
     color: rgba(255, 255, 255, 0.8);
-    font-size: 0.9rem;
+    font-size: vars.$font-size-sm;
     opacity: 0.9;
   }
 }
 
+// ========== PIRÂMIDE SELECIONADA ==========
 .piramide-selecionada {
-  background: rgba(255, 255, 255, 0.15);
+  @include mix.glass-effect(0.15);
   backdrop-filter: blur(10px);
   border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 15px;
-  padding: 1.5rem;
+  border-radius: vars.$border-radius-lg;
+  padding: vars.$spacing-lg;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -58,26 +67,23 @@
   }
 
   &.aberto {
-    border-color: #4ecdc4;
-    box-shadow: 0 0 20px rgba(78, 205, 196, 0.3);
+    border-color: vars.$secondary-color;
+    box-shadow: 0 0 20px rgba(vars.$secondary-color, 0.3);
   }
 }
 
 .piramide-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
 }
 
 .piramide-icone {
   font-size: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @include mix.flex-center;
   width: 60px;
   height: 60px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
+  border-radius: vars.$border-radius-lg;
   flex-shrink: 0;
 }
 
@@ -97,10 +103,9 @@
   }
 
   .piramide-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
+    @include mix.flex-center;
+    gap: vars.$spacing-sm;
+    font-size: vars.$font-size-sm;
     color: rgba(255, 255, 255, 0.8);
     flex-wrap: wrap;
 
@@ -113,15 +118,14 @@
     }
 
     .status {
+      @include mix.status-badge(transparent);
       padding: 2px 8px;
       border-radius: 10px;
       font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
 
       &.status-ativa {
-        background: rgba(76, 175, 80, 0.2);
-        color: #4caf50;
+        background: rgba(vars.$success-color, 0.2);
+        color: vars.$success-color;
       }
 
       &.status-finalizada {
@@ -135,31 +139,69 @@
 .seta-dropdown {
   color: rgba(255, 255, 255, 0.7);
   font-size: 1.2rem;
-  transition: all 0.3s;
+  transition: all vars.$transition-normal;
 
   .rotacionada {
     transform: rotate(180deg);
   }
 }
 
-.carregando-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 1rem;
+// ========== ESTADO SEM PIRÂMIDE ==========
+.sem-piramide-info {
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
+  opacity: 0.8;
 
-  .spinner-pequeno {
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top: 2px solid white;
-    animation: spin 1s linear infinite;
+  .icone-vazio {
+    font-size: 2.5rem;
+    @include mix.flex-center;
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: vars.$border-radius-lg;
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .detalhes-vazio {
+    flex: 1;
+    min-width: 0;
+
+    .nome-vazio {
+      display: block;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .meta-vazio {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: vars.$font-size-sm;
+    }
   }
 }
 
-// Dropdown
+// ========== LOADING ==========
+.carregando-info {
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: vars.$font-size-base;
+
+  .spinner-pequeno {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-radius: vars.$border-radius-round;
+    border-top: 4px solid white;
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+    }
+}
+
+// ========== DROPDOWN ==========
 .dropdown-overlay {
   position: fixed;
   top: 0;
@@ -176,34 +218,51 @@
   right: 0;
   background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%);
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 15px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  border-radius: vars.$border-radius-lg;
+  box-shadow: vars.$shadow-xl;
   z-index: 100;
   overflow: hidden;
   animation: dropdownSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(20px);
 }
 
-@keyframes dropdownSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 .dropdown-header {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+  background: vars.$gradient-secondary;
   color: white;
-  padding: 1rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: vars.$spacing-md vars.$spacing-lg;
+  @include mix.flex-between;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: vars.$font-size-base;
+
+  .header-actions {
+    @include mix.flex-center;
+    gap: vars.$spacing-sm;
+  }
+
+  .btn-refresh-seletor {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 6px;
+    border-radius: vars.$border-radius-round;
+    cursor: pointer;
+    transition: all vars.$transition-normal;
+    font-size: vars.$font-size-sm;
+    width: 28px;
+    height: 28px;
+    @include mix.flex-center;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.3);
+      transform: rotate(180deg);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
 
   .btn-fechar-dropdown {
     background: none;
@@ -214,11 +273,9 @@
     padding: 0;
     width: 24px;
     height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: all 0.3s;
+    @include mix.flex-center;
+    border-radius: vars.$border-radius-round;
+    transition: all vars.$transition-normal;
 
     &:hover {
       background: rgba(255, 255, 255, 0.2);
@@ -227,16 +284,33 @@
   }
 }
 
+// ========== LISTA DE PIRÂMIDES ==========
 .piramides-lista {
   max-height: 300px;
   overflow-y: auto;
-  padding: 0.5rem 0;
+  padding: vars.$spacing-sm 0;
+}
+
+.dropdown-loading {
+  padding: vars.$spacing-xl;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
+
+  .spinner-pequeno {
+    @extend .spinner-pequeno;
+  }
+
+  span {
+    font-size: vars.$font-size-sm;
+  }
 }
 
 .piramide-opcao {
-  padding: 1rem 1.5rem;
+  padding: vars.$spacing-md vars.$spacing-lg;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all vars.$transition-normal;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
   &:hover {
@@ -244,11 +318,11 @@
   }
 
   &.atual {
-    background: rgba(78, 205, 196, 0.1);
-    border-left: 4px solid #4ecdc4;
+    background: rgba(vars.$secondary-color, 0.1);
+    border-left: 4px solid vars.$secondary-color;
 
     .opcao-nome {
-      color: #4ecdc4;
+      color: vars.$secondary-color;
       font-weight: 600;
     }
   }
@@ -259,20 +333,17 @@
 }
 
 .opcao-conteudo {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  @include mix.flex-center;
+  gap: vars.$spacing-md;
 }
 
 .opcao-icone {
   font-size: 1.8rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @include mix.flex-center;
   width: 45px;
   height: 45px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
+  border-radius: vars.$border-radius-lg;
   flex-shrink: 0;
 }
 
@@ -292,10 +363,9 @@
   }
 
   .opcao-meta {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
+    @include mix.flex-center;
+    gap: vars.$spacing-sm;
+    font-size: vars.$font-size-xs;
     color: rgba(255, 255, 255, 0.7);
     flex-wrap: wrap;
 
@@ -308,15 +378,14 @@
     }
 
     .opcao-status {
+      @include mix.status-badge(transparent);
       padding: 2px 6px;
       border-radius: 8px;
       font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
 
       &.status-ativa {
-        background: rgba(76, 175, 80, 0.2);
-        color: #4caf50;
+        background: rgba(vars.$success-color, 0.2);
+        color: vars.$success-color;
       }
 
       &.status-finalizada {
@@ -328,10 +397,57 @@
 }
 
 .opcao-indicador {
-  color: #4ecdc4;
+  color: vars.$secondary-color;
   font-size: 1.2rem;
   font-weight: bold;
   animation: checkPulse 1.5s infinite;
+}
+
+// ========== SEM PIRÂMIDES ==========
+.sem-piramides {
+  padding: vars.$spacing-xl;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+  @include mix.flex-column-center;
+  gap: vars.$spacing-md;
+
+  .icone-vazio {
+    font-size: 3rem;
+    opacity: 0.5;
+  }
+
+  .sem-piramides-content {
+    h4 {
+      margin: 0 0 vars.$spacing-sm 0;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    p {
+      margin: 0 0 0.25rem 0;
+      font-size: vars.$font-size-sm;
+      opacity: 0.8;
+    }
+
+    small {
+      font-size: vars.$font-size-xs;
+      opacity: 0.6;
+      font-style: italic;
+    }
+  }
+}
+
+// ========== ANIMAÇÕES ==========
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes checkPulse {
@@ -339,38 +455,14 @@
   50% { transform: scale(1.1); }
 }
 
-.sem-piramides {
-  padding: 2rem;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.6);
-
-  .icone-vazio {
-    font-size: 3rem;
-    display: block;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-  }
-
-  p {
-    margin: 0;
-    font-size: 0.9rem;
-  }
-}
-
-// Spinner animation
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-// Responsivo
-@media (max-width: 768px) {
+// ========== RESPONSIVIDADE ==========
+@include mix.tablet {
   .seletor-piramide-container {
-    margin-bottom: 1.5rem;
+    margin-bottom: vars.$spacing-lg;
   }
 
   .piramide-selecionada {
-    padding: 1rem;
+    padding: vars.$spacing-md;
   }
 
   .piramide-icone {
@@ -399,11 +491,11 @@
   }
 
   .opcao-info .opcao-nome {
-    font-size: 1rem;
+    font-size: vars.$font-size-base;
   }
 }
 
-@media (max-width: 480px) {
+@include mix.mobile {
   .piramide-detalhes .piramide-meta {
     flex-direction: column;
     align-items: flex-start;
@@ -423,194 +515,11 @@
       display: none;
     }
   }
-}
-// ========== ESTADO SEM PIRÂMIDE SELECIONADA ==========
-.sem-piramide-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  opacity: 0.8;
 
-  .icone-vazio {
-    font-size: 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    height: 60px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 15px;
-    flex-shrink: 0;
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  .detalhes-vazio {
-    flex: 1;
-    min-width: 0;
-
-    .nome-vazio {
-      display: block;
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 0.25rem;
-    }
-
-    .meta-vazio {
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 0.9rem;
-    }
-  }
-}
-
-// ========== HEADER ACTIONS NO DROPDOWN ==========
-.dropdown-header {
-  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-  color: white;
-  padding: 1rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 600;
-  font-size: 1rem;
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .btn-refresh-seletor {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    padding: 6px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-size: 0.9rem;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.3);
-      transform: rotate(180deg);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-  }
-
-  .btn-fechar-dropdown {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 1.5rem;
-    cursor: pointer;
-    padding: 0;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: all 0.3s;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: rotate(90deg);
-    }
-  }
-}
-
-// ========== LOADING NO DROPDOWN ==========
-.dropdown-loading {
-  padding: 2rem;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-
-  .spinner-pequeno {
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top: 2px solid white;
-    animation: spin 1s linear infinite;
-  }
-
-  span {
-    font-size: 0.9rem;
-  }
-}
-
-// ========== MELHORIAS NO SEM PIRÂMIDES ==========
-.sem-piramides {
-  padding: 2rem;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-
-  .icone-vazio {
-    font-size: 3rem;
-    opacity: 0.5;
-  }
-
-  .sem-piramides-content {
-    h4 {
-      margin: 0 0 0.5rem 0;
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    p {
-      margin: 0 0 0.25rem 0;
-      font-size: 0.9rem;
-      opacity: 0.8;
-    }
-
-    small {
-      font-size: 0.8rem;
-      opacity: 0.6;
-      font-style: italic;
-    }
-  }
-}
-
-// ========== ANIMAÇÃO DE REFRESH ==========
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.spinner-pequeno {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top: 2px solid white;
-  animation: spin 1s linear infinite;
-}
-
-// ========== MELHORIAS NA RESPONSIVIDADE ==========
-@media (max-width: 768px) {
   .sem-piramide-info {
     flex-direction: column;
     text-align: center;
-    gap: 0.5rem;
+    gap: vars.$spacing-sm;
 
     .icone-vazio {
       width: 50px;
@@ -624,19 +533,19 @@
       }
 
       .meta-vazio {
-        font-size: 0.8rem;
+        font-size: vars.$font-size-xs;
       }
     }
   }
 
   .dropdown-header {
-    padding: 0.8rem 1rem;
-    font-size: 0.9rem;
+    padding: vars.$spacing-sm vars.$spacing-md;
+    font-size: vars.$font-size-sm;
 
     .btn-refresh-seletor {
       width: 24px;
       height: 24px;
-      font-size: 0.8rem;
+      font-size: vars.$font-size-xs;
     }
 
     .btn-fechar-dropdown {
@@ -647,7 +556,9 @@
   }
 
   .dropdown-loading {
-    padding: 1.5rem;
+    padding: vars.$spacing-lg;
+    flex-direction: column;
+    gap: vars.$spacing-sm;
 
     .spinner-pequeno {
       width: 16px;
@@ -655,12 +566,12 @@
     }
 
     span {
-      font-size: 0.8rem;
+      font-size: vars.$font-size-xs;
     }
   }
 
   .sem-piramides {
-    padding: 1.5rem;
+    padding: vars.$spacing-lg;
 
     .icone-vazio {
       font-size: 2.5rem;
@@ -668,11 +579,11 @@
 
     .sem-piramides-content {
       h4 {
-        font-size: 1rem;
+        font-size: vars.$font-size-base;
       }
 
       p {
-        font-size: 0.8rem;
+        font-size: vars.$font-size-xs;
       }
 
       small {
@@ -680,15 +591,8 @@
       }
     }
   }
-}
 
-@media (max-width: 480px) {
   .header-actions {
     gap: 0.25rem;
-  }
-
-  .dropdown-loading {
-    flex-direction: column;
-    gap: 0.5rem;
   }
 }
