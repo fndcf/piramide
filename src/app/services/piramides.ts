@@ -1,4 +1,4 @@
-// src/app/services/piramides.ts - ATUALIZADO COM FIREBASE
+// src/app/services/piramides.ts - CORRIGIDO PARA EVITAR ERRO DO FIREBASE
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { 
@@ -23,67 +23,125 @@ export class PiramidesService {
   private piramidesCache: Piramide[] = [];
   private lastCacheUpdate = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+  
+  // Flag de inicialização
+  private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor(private firebase: FirebaseService) {
     this.inicializarDados();
   }
 
+  // ✅ MÉTODO CORRIGIDO: inicializarDados com melhor tratamento de erro
   private async inicializarDados() {
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    this.initializationPromise = this._inicializar();
+    return this.initializationPromise;
+  }
+
+  private async _inicializar(): Promise<void> {
     try {
       console.log('🔄 Inicializando PiramidesService...');
       
-      // Tentar obter a pirâmide atual do Firebase
-      const configResult = await this.firebase.get('configuracoes', 'global');
+      // ✅ AGUARDAR inicialização do Firebase
+      const diagnostics = await this.firebase.getDiagnostics();
+      if (!diagnostics.firestoreAvailable) {
+        throw new Error('Firestore não está disponível');
+      }
+
+      // ✅ TENTATIVA SEGURA de obter configuração global
+      let piramideAtualId: string | null = null;
       
-      if (configResult.success && configResult.data?.piramideAtualId) {
-        console.log('📋 Configuração encontrada:', configResult.data.piramideAtualId);
-        const piramideResult = await this.firebase.get('piramides', configResult.data.piramideAtualId);
+      try {
+        console.log('📋 Tentando obter configuração global...');
+        const configResult = await this.firebase.get('configuracoes', 'global');
         
-        if (piramideResult.success) {
-          this.piramideAtual = this.formatarPiramide(piramideResult.data);
-          this.piramideAtualSubject.next(this.piramideAtual);
-          console.log('✅ Pirâmide atual carregada:', this.piramideAtual.nome);
-          return; // Pirâmide encontrada, não fazer mais nada
+        if (configResult.success && configResult.data?.piramideAtualId) {
+          piramideAtualId = configResult.data.piramideAtualId;
+          console.log('✅ Configuração global encontrada:', piramideAtualId);
+        } else {
+          console.log('⚠️ Configuração global não encontrada, será criada posteriormente');
+        }
+      } catch (configError) {
+        console.warn('⚠️ Erro ao acessar configuração global:', configError);
+        // Continua sem configuração global (será criada posteriormente)
+      }
+
+      // ✅ TENTATIVA de obter pirâmide atual se ID foi encontrado
+      if (piramideAtualId) {
+        try {
+          const piramideResult = await this.firebase.get('piramides', piramideAtualId);
+          
+          if (piramideResult.success && piramideResult.data) {
+            this.piramideAtual = this.formatarPiramide(piramideResult.data);
+            this.piramideAtualSubject.next(this.piramideAtual);
+            console.log('✅ Pirâmide atual carregada:', this.piramideAtual.nome);
+            this.isInitialized = true;
+            return; // Sucesso, sair da função
+          }
+        } catch (piramideError) {
+          console.warn('⚠️ Erro ao carregar pirâmide atual:', piramideError);
         }
       }
 
-      // Se não há configuração, buscar pirâmides ativas (SEM orderBy para evitar erro de índice)
-      console.log('🔍 Buscando pirâmides ativas...');
-      const result = await this.firebase.findBy('piramides', 'status', 'ativa');
+      // ✅ BUSCAR primeira pirâmide ativa disponível
+      try {
+        console.log('🔍 Buscando pirâmides ativas...');
+        const result = await this.firebase.findBy('piramides', 'status', 'ativa');
 
-      if (result.success && result.data && result.data.length > 0) {
-        console.log(`📊 ${result.data.length} pirâmide(s) ativa(s) encontrada(s)`);
-        
-        // Ordenar manualmente por dataInicio
-        const piramidesOrdenadas = result.data.sort((a, b) => {
-          const dataA = a.dataInicio?.toDate ? a.dataInicio.toDate() : new Date(a.dataInicio);
-          const dataB = b.dataInicio?.toDate ? b.dataInicio.toDate() : new Date(b.dataInicio);
-          return dataA.getTime() - dataB.getTime();
-        });
-        
-        const piramide = this.formatarPiramide(piramidesOrdenadas[0]);
-        await this.selecionarPiramide(piramide.id);
-        console.log('✅ Primeira pirâmide ativa selecionada:', piramide.nome);
-      } else {
-        // Se não há pirâmides, definir como null (não criar automaticamente)
+        if (result.success && result.data && result.data.length > 0) {
+          console.log(`📊 ${result.data.length} pirâmide(s) ativa(s) encontrada(s)`);
+          
+          // Ordenar manualmente por dataInicio (mais antiga primeiro)
+          const piramidesOrdenadas = result.data.sort((a, b) => {
+            const dataA = a.dataInicio?.toDate ? a.dataInicio.toDate() : new Date(a.dataInicio);
+            const dataB = b.dataInicio?.toDate ? b.dataInicio.toDate() : new Date(b.dataInicio);
+            return dataA.getTime() - dataB.getTime();
+          });
+          
+          const piramide = this.formatarPiramide(piramidesOrdenadas[0]);
+          await this.selecionarPiramide(piramide.id);
+          console.log('✅ Primeira pirâmide ativa selecionada:', piramide.nome);
+        } else {
+          console.log('⚠️ Nenhuma pirâmide ativa encontrada');
+          this.piramideAtual = null;
+          this.piramideAtualSubject.next(null);
+        }
+      } catch (searchError) {
+        console.warn('⚠️ Erro ao buscar pirâmides ativas:', searchError);
         this.piramideAtual = null;
         this.piramideAtualSubject.next(null);
-        console.log('⚠️ Nenhuma pirâmide encontrada - Modal de criação aparecerá apenas para administradores');
       }
+
+      this.isInitialized = true;
+      console.log('✅ PiramidesService inicializado');
+      
     } catch (error) {
-      console.error('❌ Erro ao inicializar dados das pirâmides:', error);
-      // Em caso de erro, não mostrar modal automaticamente
+      console.error('❌ Erro crítico ao inicializar PiramidesService:', error);
       this.piramideAtual = null;
       this.piramideAtualSubject.next(null);
+      this.isInitialized = true; // Marcar como inicializado mesmo com erro
+    }
+  }
+
+  // ✅ MÉTODO auxiliar para aguardar inicialização
+  private async aguardarInicializacao(): Promise<void> {
+    if (!this.isInitialized) {
+      await this.inicializarDados();
     }
   }
 
   // Método para verificar se precisa de configuração inicial (apenas para admin)
   async precisaConfiguracaoInicial(): Promise<boolean> {
     try {
+      await this.aguardarInicializacao();
       const piramides = await this.firebase.getAll('piramides');
       return !piramides.success || !piramides.data || piramides.data.length === 0;
     } catch (error) {
+      console.error('Erro ao verificar configuração inicial:', error);
       return true;
     }
   }
@@ -126,11 +184,18 @@ export class PiramidesService {
     };
   }
 
-  // ========== OPERAÇÕES BÁSICAS ==========
+  // ========== OPERAÇÕES BÁSICAS CORRIGIDAS ==========
   
-  // ✅ MÉTODO CORRIGIDO: criarPiramide com limpeza de cache
+  // ✅ MÉTODO CORRIGIDO: criarPiramide com melhor tratamento de erro
   async criarPiramide(novaPiramide: NovaPiramide): Promise<{ success: boolean; message: string; piramide?: Piramide }> {
     try {
+      await this.aguardarInicializacao();
+      
+      // Validar entrada
+      if (!novaPiramide.nome?.trim()) {
+        return { success: false, message: 'Nome da pirâmide é obrigatório' };
+      }
+
       // Validar nome único
       const existeResult = await this.firebase.findFirst('piramides', 'nome', novaPiramide.nome.trim());
       if (existeResult.success) {
@@ -190,9 +255,11 @@ export class PiramidesService {
     }
   }
 
-  // ✅ MÉTODO CORRIGIDO: obterPiramides com melhor cache
+  // ✅ MÉTODO CORRIGIDO: obterPiramides com melhor cache e tratamento de erro
   async obterPiramides(): Promise<Piramide[]> {
     try {
+      await this.aguardarInicializacao();
+      
       // Verificar cache apenas se não for muito antigo (reduzido para 2 minutos)
       const agora = Date.now();
       const CACHE_DURATION_REDUCED = 2 * 60 * 1000; // 2 minutos
@@ -203,13 +270,17 @@ export class PiramidesService {
       }
 
       console.log('🔄 Buscando pirâmides no Firebase...');
-      const result = await this.firebase.getAll(
-        'piramides',
-        [orderBy('dataInicio', 'desc')]
-      );
+      
+      // ✅ BUSCA SEGURA sem orderBy (pode causar erro de índice)
+      const result = await this.firebase.getAll('piramides');
 
       if (result.success && result.data) {
-        this.piramidesCache = result.data.map(p => this.formatarPiramide(p));
+        // Ordenar manualmente por dataInicio
+        const piramidesOrdenadas = result.data
+          .map(p => this.formatarPiramide(p))
+          .sort((a, b) => b.dataInicio.getTime() - a.dataInicio.getTime()); // Mais recente primeiro
+
+        this.piramidesCache = piramidesOrdenadas;
         this.lastCacheUpdate = agora;
         
         console.log(`✅ ${this.piramidesCache.length} pirâmides carregadas do Firebase`);
@@ -226,15 +297,17 @@ export class PiramidesService {
 
   async obterPiramidesPorStatus(status: string): Promise<Piramide[]> {
     try {
-      const result = await this.firebase.findBy(
-        'piramides',
-        'status',
-        status,
-        [orderBy('dataInicio', 'desc')]
-      );
+      await this.aguardarInicializacao();
+      
+      const result = await this.firebase.findBy('piramides', 'status', status);
 
       if (result.success && result.data) {
-        return result.data.map(p => this.formatarPiramide(p));
+        // Ordenar manualmente
+        const piramides = result.data
+          .map(p => this.formatarPiramide(p))
+          .sort((a, b) => b.dataInicio.getTime() - a.dataInicio.getTime());
+        
+        return piramides;
       } else {
         return [];
       }
@@ -270,15 +343,21 @@ export class PiramidesService {
     }
   }
 
-  // ✅ MÉTODO CORRIGIDO: selecionarPiramide com limpeza de cache
+  // ✅ MÉTODO CORRIGIDO: selecionarPiramide com melhor tratamento de erro
   async selecionarPiramide(piramideId: string): Promise<{ success: boolean; message: string }> {
     try {
+      await this.aguardarInicializacao();
+      
+      if (!piramideId) {
+        return { success: false, message: 'ID da pirâmide é obrigatório' };
+      }
+
       const result = await this.firebase.get('piramides', piramideId);
       
       if (!result.success) {
         return {
           success: false,
-          message: 'Pirâmide não encontrada'
+          message: result.error || 'Pirâmide não encontrada'
         };
       }
 
@@ -295,15 +374,22 @@ export class PiramidesService {
       this.piramideAtual = piramide;
       this.piramideAtualSubject.next(piramide);
 
-      // Salvar configuração global
-      await this.firebase.set('configuracoes', 'global', {
-        piramideAtualId: piramideId,
-        versaoApp: '1.0.0'
-      });
+      // ✅ SALVAR configuração global com tratamento de erro
+      try {
+        await this.firebase.set('configuracoes', 'global', {
+          piramideAtualId: piramideId,
+          versaoApp: '1.0.0',
+          ultimaAtualizacao: new Date()
+        });
+      } catch (configError) {
+        console.warn('⚠️ Erro ao salvar configuração global:', configError);
+        // Continua mesmo se não conseguir salvar a configuração
+      }
 
       // ✅ LIMPAR cache para garantir dados atualizados
       await this.limparCache();
 
+      console.log(`✅ Pirâmide "${piramide.nome}" selecionada`);
       return {
         success: true,
         message: `Pirâmide "${piramide.nome}" selecionada`
@@ -325,10 +411,12 @@ export class PiramidesService {
     return this.piramideAtual?.id || null;
   }
 
-  // ========== REATIVAÇÃO E EXCLUSÃO ==========
-  
+  // ========== OUTROS MÉTODOS (mantidos iguais mas com aguardarInicializacao) ==========
+
   async reativarPiramide(piramideId: string): Promise<{ success: boolean; message: string }> {
     try {
+      await this.aguardarInicializacao();
+      
       const getResult = await this.firebase.get('piramides', piramideId);
       
       if (!getResult.success) {
@@ -388,9 +476,11 @@ export class PiramidesService {
     }
   }
 
-  // ✅ MÉTODO CORRIGIDO: excluirPiramide com limpeza de cache
+  // ✅ MÉTODO CORRIGIDO: excluirPiramide com melhor tratamento
   async excluirPiramide(piramideId: string): Promise<{ success: boolean; message: string }> {
     try {
+      await this.aguardarInicializacao();
+      
       const getResult = await this.firebase.get('piramides', piramideId);
       
       if (!getResult.success) {
@@ -411,19 +501,11 @@ export class PiramidesService {
       }
 
       // Verificar se é a última pirâmide
-      const piramidesAtivas = await this.firebase.findBy(
-        'piramides',
-        'status',
-        'ativa'
-      );
+      const piramidesAtivas = await this.firebase.findBy('piramides', 'status', 'ativa');
 
       if (piramidesAtivas.success && (!piramidesAtivas.data || piramidesAtivas.data.length === 0)) {
         // Verificar pirâmides pausadas também
-        const piramidesPausadas = await this.firebase.findBy(
-          'piramides',
-          'status',
-          'pausada'
-        );
+        const piramidesPausadas = await this.firebase.findBy('piramides', 'status', 'pausada');
 
         if (!piramidesPausadas.success || !piramidesPausadas.data || piramidesPausadas.data.length === 0) {
           return {
@@ -437,6 +519,9 @@ export class PiramidesService {
       if (this.piramideAtual?.id === piramideId) {
         if (piramidesAtivas.success && piramidesAtivas.data && piramidesAtivas.data.length > 0) {
           await this.selecionarPiramide(piramidesAtivas.data[0].id);
+        } else {
+          this.piramideAtual = null;
+          this.piramideAtualSubject.next(null);
         }
       }
 
@@ -471,7 +556,6 @@ export class PiramidesService {
   // ========== VALIDAÇÕES DE PROTEÇÃO ==========
   
   isPiramideEditavel(piramideId: string): boolean {
-    // Implementar cache local ou buscar do Firebase se necessário
     const piramide = this.piramidesCache.find(p => p.id === piramideId);
     return piramide?.status === 'ativa' || piramide?.status === 'pausada';
   }
@@ -519,11 +603,13 @@ export class PiramidesService {
     }
   }
 
-  // ========== OPERAÇÕES AVANÇADAS ==========
+  // ========== MÉTODOS AUXILIARES ==========
   
-  // ✅ MÉTODO CORRIGIDO: atualizarPiramide com limpeza de cache
+  // ✅ MÉTODO CORRIGIDO: atualizarPiramide
   async atualizarPiramide(piramideId: string, dados: Partial<Piramide>): Promise<{ success: boolean; message: string }> {
     try {
+      await this.aguardarInicializacao();
+      
       // Validar nome único se estiver sendo alterado
       if (dados.nome) {
         const existeResult = await this.firebase.findFirst('piramides', 'nome', dados.nome.trim());
@@ -566,9 +652,11 @@ export class PiramidesService {
     }
   }
 
-  // ✅ MÉTODO CORRIGIDO: alterarStatusPiramide com limpeza de cache
+  // ✅ MÉTODO CORRIGIDO: alterarStatusPiramide
   async alterarStatusPiramide(piramideId: string, novoStatus: Piramide['status']): Promise<{ success: boolean; message: string }> {
     try {
+      await this.aguardarInicializacao();
+      
       const dados: Partial<Piramide> = { status: novoStatus };
       
       if (novoStatus === 'finalizada') {
@@ -601,6 +689,8 @@ export class PiramidesService {
 
   async arquivarPiramide(piramideId: string): Promise<{ success: boolean; message: string }> {
     try {
+      await this.aguardarInicializacao();
+      
       const getResult = await this.firebase.get('piramides', piramideId);
       
       if (!getResult.success) {
@@ -624,7 +714,12 @@ export class PiramidesService {
           // Não há outras pirâmides ativas
           this.piramideAtual = null;
           this.piramideAtualSubject.next(null);
-          await this.firebase.update('configuracoes', 'global', { piramideAtualId: null });
+          
+          try {
+            await this.firebase.update('configuracoes', 'global', { piramideAtualId: null });
+          } catch (configError) {
+            console.warn('Erro ao atualizar configuração global:', configError);
+          }
         }
       }
 
@@ -640,6 +735,8 @@ export class PiramidesService {
 
   async obterEstatisticasPiramide(piramideId: string): Promise<EstatisticasPiramide> {
     try {
+      await this.aguardarInicializacao();
+      
       // TODO: Integrar com DuplasService para obter dados reais
       const piramideResult = await this.firebase.get('piramides', piramideId);
       const piramide = piramideResult.success ? piramideResult.data : null;
@@ -693,11 +790,67 @@ export class PiramidesService {
     ];
   }
 
-  // ✅ ADICIONAR método para limpar cache
+  // ✅ MÉTODO CORRIGIDO: limparCache
   async limparCache(): Promise<void> {
     console.log('🧹 Limpando cache das pirâmides...');
     this.piramidesCache = [];
     this.lastCacheUpdate = 0;
   }
-  
+
+  // ========== MÉTODOS DE DIAGNÓSTICO ==========
+
+  // Verificar status do service
+  async getDiagnostics(): Promise<{
+    isInitialized: boolean;
+    piramideAtual: string | null;
+    totalPiramidesCache: number;
+    lastCacheUpdate: number;
+    firebaseStatus: any;
+  }> {
+    try {
+      const firebaseStatus = await this.firebase.getDiagnostics();
+      
+      return {
+        isInitialized: this.isInitialized,
+        piramideAtual: this.piramideAtual?.nome || null,
+        totalPiramidesCache: this.piramidesCache.length,
+        lastCacheUpdate: this.lastCacheUpdate,
+        firebaseStatus
+      };
+    } catch (error) {
+      return {
+        isInitialized: this.isInitialized,
+        piramideAtual: this.piramideAtual?.nome || null,
+        totalPiramidesCache: this.piramidesCache.length,
+        lastCacheUpdate: this.lastCacheUpdate,
+        firebaseStatus: { error: error }
+      };
+    }
+  }
+
+  // Forçar recarregamento completo
+  async forceReload(): Promise<void> {
+    console.log('🔄 Forçando recarregamento completo do PiramidesService...');
+    
+    // Limpar cache
+    await this.limparCache();
+    
+    // Resetar inicialização
+    this.isInitialized = false;
+    this.initializationPromise = null;
+    
+    // Reinicializar
+    await this.inicializarDados();
+  }
+
+  // Método para teste de conectividade
+  async testFirebaseConnection(): Promise<boolean> {
+    try {
+      await this.aguardarInicializacao();
+      return await this.firebase.checkConnection();
+    } catch (error) {
+      console.error('Erro ao testar conexão Firebase:', error);
+      return false;
+    }
+  }
 }
