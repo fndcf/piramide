@@ -1,4 +1,4 @@
-// src/app/services/auth.ts - VERSÃO OTIMIZADA COM FIREBASE
+// src/app/services/auth.ts - CORRIGIDO PARA FIREBASE
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { 
@@ -10,15 +10,12 @@ import {
   UserCredential
 } from '@angular/fire/auth';
 import { FirebaseService } from './firebase';
-import { orderBy, limit } from '@angular/fire/firestore';
 
-// Interface para usuários da aplicação
 interface AppUser {
   uid: string;
   email?: string | null;
   tipo: 'admin' | 'jogador';
   displayName: string;
-  // Propriedades específicas do jogador
   duplaId?: string;
   dupla?: any;
   telefone?: string;
@@ -31,12 +28,8 @@ export class AuthService {
   private currentUserSubject = new BehaviorSubject<AppUser | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
   
-  // Email do administrador
   private readonly ADMIN_EMAIL = 'admin@piramide.com';
-  
-  // Cache para sessões de jogadores
-  private sessoesCache = new Map<string, any>();
-  private readonly SESSAO_DURATION = 24 * 60 * 60 * 1000; // 24 horas
+  private isInitialized = false;
 
   constructor(
     private auth: Auth,
@@ -45,41 +38,81 @@ export class AuthService {
     this.inicializarAuth();
   }
 
-  private inicializarAuth() {
-    // Monitorar login de admin via Firebase Auth
-    onAuthStateChanged(this.auth, (user: User | null) => {
-      if (user && user.email === this.ADMIN_EMAIL) {
-        const appUser: AppUser = {
-          uid: user.uid,
-          email: user.email,
-          tipo: 'admin',
-          displayName: 'Administrador'
-        };
-        this.currentUserSubject.next(appUser);
-        console.log('👑 Admin logado via Firebase');
-      } else if (!user) {
-        // Verificar se há jogador logado localmente
-        this.verificarSessaoJogadorLocal();
+  private async inicializarAuth() {
+    try {
+      console.log('🔐 Inicializando AuthService...');
+      
+      // Aguardar inicialização do Firebase
+      const diagnostics = await this.firebase.getDiagnostics();
+      if (!diagnostics.firestoreAvailable) {
+        console.error('❌ Firestore não disponível');
+        return;
       }
-    });
 
-    // Verificar sessão de jogador ao inicializar
-    this.verificarSessaoJogadorLocal();
+      // Monitorar estado de autenticação do Firebase
+      onAuthStateChanged(this.auth, async (user: User | null) => {
+        console.log('🔄 Estado de auth mudou:', user?.email || 'Não logado');
+        
+        if (user && user.email === this.ADMIN_EMAIL) {
+          const appUser: AppUser = {
+            uid: user.uid,
+            email: user.email,
+            tipo: 'admin',
+            displayName: 'Administrador'
+          };
+          this.currentUserSubject.next(appUser);
+          console.log('👑 Admin logado via Firebase');
+        } else {
+          // Se não é admin Firebase, verificar sessão local de jogador
+          await this.verificarSessaoJogadorLocal();
+        }
+      });
+
+      // Verificar sessão inicial
+      await this.verificarSessaoJogadorLocal();
+      this.isInitialized = true;
+      console.log('✅ AuthService inicializado');
+      
+    } catch (error) {
+      console.error('❌ Erro ao inicializar AuthService:', error);
+      this.isInitialized = true;
+    }
   }
 
-  // ========== LOGIN ADMIN (Firebase Auth) ==========
-
+  // ========== LOGIN ADMIN ==========
   async loginAdmin(email: string, password: string): Promise<{success: boolean, error?: string}> {
     try {
       if (email !== this.ADMIN_EMAIL) {
         return { success: false, error: 'Email de administrador inválido' };
       }
 
-      console.log('🔐 Tentando login admin via Firebase...');
+      console.log('🔐 Tentando login admin...');
+      
+      // Testar conexão primeiro
+      const connectionOk = await this.firebase.checkConnection();
+      if (!connectionOk) {
+        return { 
+          success: false, 
+          error: 'Problemas de conexão com o Firebase. Verifique sua internet.' 
+        };
+      }
+
       const result: UserCredential = await signInWithEmailAndPassword(this.auth, email, password);
       
       if (result.user) {
         console.log('✅ Admin logado com sucesso');
+        
+        // Registrar evento de login
+        try {
+          await this.registrarEventoSeguranca('admin_login', {
+            email: email,
+            timestamp: new Date(),
+            ip: 'unknown'
+          });
+        } catch (logError) {
+          console.warn('⚠️ Erro ao registrar evento de login:', logError);
+        }
+
         return { success: true };
       } else {
         return { success: false, error: 'Falha na autenticação' };
@@ -88,43 +121,41 @@ export class AuthService {
       console.error('❌ Erro no login admin:', error);
       
       const errorMessages = {
-        'auth/user-not-found': 'Usuário administrador não encontrado',
+        'auth/user-not-found': 'Usuário administrador não encontrado no Firebase',
         'auth/wrong-password': 'Senha incorreta',
         'auth/invalid-email': 'Email inválido',
-        'auth/too-many-requests': 'Muitas tentativas. Tente novamente mais tarde',
-        'auth/invalid-credential': 'Credenciais inválidas'
+        'auth/too-many-requests': 'Muitas tentativas. Aguarde alguns minutos',
+        'auth/invalid-credential': 'Credenciais inválidas',
+        'auth/network-request-failed': 'Erro de conexão. Verifique sua internet'
       };
       
       return { 
         success: false, 
-        error: errorMessages[error.code as keyof typeof errorMessages] || 'Erro ao fazer login. Tente novamente.' 
+        error: errorMessages[error.code as keyof typeof errorMessages] || 
+               `Erro ao fazer login: ${error.message || 'Erro desconhecido'}` 
       };
     }
   }
 
-  // ========== LOGIN JOGADOR (Firebase + Cache Local) ==========
-
+  // ========== LOGIN JOGADOR ==========
   async loginJogador(jogadorInfo: {duplaId: string, dupla: any, telefone: string}): Promise<{success: boolean, error?: string}> {
     try {
-      console.log('🏐 Iniciando login de jogador:', jogadorInfo.dupla.jogador1, '/', jogadorInfo.dupla.jogador2);
+      console.log('🏐 Login jogador:', jogadorInfo.dupla.jogador1, '/', jogadorInfo.dupla.jogador2);
       
-      // Validações básicas
-      if (!jogadorInfo.duplaId || !jogadorInfo.dupla) {
-        return { success: false, error: 'Informações da dupla são obrigatórias' };
+      // Validações
+      if (!jogadorInfo.duplaId || !jogadorInfo.dupla || !jogadorInfo.telefone) {
+        return { success: false, error: 'Informações incompletas da dupla' };
       }
 
-      if (!jogadorInfo.dupla.jogador1 || !jogadorInfo.dupla.jogador2) {
-        return { success: false, error: 'Dupla deve ter dois jogadores' };
+      // Testar conexão
+      const connectionOk = await this.firebase.checkConnection();
+      if (!connectionOk) {
+        return { 
+          success: false, 
+          error: 'Problemas de conexão. Verifique sua internet.' 
+        };
       }
 
-      if (!jogadorInfo.telefone) {
-        return { success: false, error: 'Telefone é obrigatório' };
-      }
-
-      // Criar hash seguro do telefone
-      const telefoneHash = this.criarHashTelefone(jogadorInfo.telefone);
-      
-      // Criar sessão local
       const appUser: AppUser = {
         uid: `jogador_${jogadorInfo.duplaId}`,
         tipo: 'jogador',
@@ -134,84 +165,58 @@ export class AuthService {
         telefone: jogadorInfo.telefone
       };
 
-      // Criar dados da sessão
-      const sessaoData = {
-        duplaId: jogadorInfo.duplaId,
-        telefone: this.criptografarTelefone(jogadorInfo.telefone),
-        loginTimestamp: new Date(),
-        ultimoAcesso: new Date(),
-        ativo: true,
-        userAgent: navigator.userAgent,
-        dispositivo: this.detectarDispositivo()
-      };
-
-      // Salvar no Firebase (opcional - para controle de sessões)
-      try {
-        await this.firebase.set('sessoes-jogador', telefoneHash, sessaoData);
-        console.log('✅ Sessão salva no Firebase');
-      } catch (firebaseError) {
-        console.log('⚠️ Erro ao salvar no Firebase, continuando com cache local:', firebaseError);
-      }
-
-      // Salvar cache local (principal)
+      // Salvar sessão local
       const sessaoLocal = {
         ...appUser,
         loginTimestamp: new Date().toISOString(),
-        ultimoAcesso: new Date().toISOString(),
-        telefoneHash
+        ultimoAcesso: new Date().toISOString()
       };
 
       localStorage.setItem('sessao_jogador', JSON.stringify(sessaoLocal));
-      this.sessoesCache.set(telefoneHash, sessaoLocal);
-      
-      // Atualizar estado da aplicação
       this.currentUserSubject.next(appUser);
+      
+      // Tentar registrar no Firebase (não crítico se falhar)
+      try {
+        const telefoneHash = this.criarHashTelefone(jogadorInfo.telefone);
+        await this.firebase.set('sessoes-jogador', telefoneHash, {
+          duplaId: jogadorInfo.duplaId,
+          telefone: this.criptografarTelefone(jogadorInfo.telefone),
+          loginTimestamp: new Date(),
+          ultimoAcesso: new Date(),
+          ativo: true,
+          userAgent: navigator.userAgent,
+          dispositivo: this.detectarDispositivo()
+        });
+      } catch (firebaseError) {
+        console.warn('⚠️ Erro ao salvar sessão no Firebase (continuando):', firebaseError);
+      }
       
       console.log('✅ Jogador logado com sucesso');
       return { success: true };
       
     } catch (error: any) {
       console.error('❌ Erro no login jogador:', error);
-      return { success: false, error: 'Erro ao fazer login como jogador. Tente novamente.' };
+      return { success: false, error: 'Erro ao fazer login. Tente novamente.' };
     }
   }
 
-  // ========== VERIFICAÇÃO DE SESSÕES ==========
-
+  // ========== VERIFICAÇÕES E VALIDAÇÕES ==========
   private async verificarSessaoJogadorLocal(): Promise<void> {
     try {
       const sessaoSalva = localStorage.getItem('sessao_jogador');
-      
       if (!sessaoSalva) return;
 
       const sessao = JSON.parse(sessaoSalva);
       
-      // Verificar se a sessão não expirou
+      // Verificar se não expirou (24 horas)
       const loginTime = new Date(sessao.loginTimestamp);
       const agora = new Date();
       const diferencaHoras = (agora.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
       
       if (diferencaHoras > 24) {
-        // Sessão expirada
         localStorage.removeItem('sessao_jogador');
-        console.log('⏰ Sessão de jogador expirada - removida');
+        console.log('⏰ Sessão de jogador expirada');
         return;
-      }
-
-      // Sessão válida - verificar no Firebase se possível
-      try {
-        if (sessao.telefoneHash) {
-          const sessaoFirebase = await this.firebase.get('sessoes-jogador', sessao.telefoneHash);
-          
-          if (sessaoFirebase.success && sessaoFirebase.data && sessaoFirebase.data.ativo) {
-            // Atualizar último acesso no Firebase
-            await this.firebase.update('sessoes-jogador', sessao.telefoneHash, {
-              ultimoAcesso: new Date()
-            });
-          }
-        }
-      } catch (firebaseError) {
-        console.log('⚠️ Erro ao verificar sessão no Firebase, usando cache local');
       }
 
       // Restaurar usuário
@@ -224,10 +229,6 @@ export class AuthService {
         telefone: sessao.telefone
       };
       
-      // Atualizar último acesso local
-      sessao.ultimoAcesso = new Date().toISOString();
-      localStorage.setItem('sessao_jogador', JSON.stringify(sessao));
-      
       this.currentUserSubject.next(appUser);
       console.log('🔄 Sessão de jogador restaurada:', appUser.displayName);
       
@@ -237,210 +238,30 @@ export class AuthService {
     }
   }
 
-  async verificarSessaoNoFirebase(telefoneHash: string): Promise<boolean> {
-    try {
-      const result = await this.firebase.get('sessoes-jogador', telefoneHash);
-      
-      if (result.success && result.data) {
-        const sessao = result.data;
-        
-        // Verificar se está ativa e não expirou
-        const loginTime = sessao.loginTimestamp?.toDate ? 
-          sessao.loginTimestamp.toDate() : 
-          new Date(sessao.loginTimestamp);
-        
-        const agora = new Date();
-        const diferencaHoras = (agora.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
-        
-        return sessao.ativo && diferencaHoras <= 24;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Erro ao verificar sessão no Firebase:', error);
-      return false;
-    }
-  }
-
   // ========== LOGOUT ==========
-
   async logout(): Promise<void> {
     try {
       const currentUser = this.currentUserSubject.value;
       
       if (currentUser?.tipo === 'admin') {
-        // Logout do admin via Firebase
         await signOut(this.auth);
         console.log('👑 Admin deslogado');
       } else if (currentUser?.tipo === 'jogador') {
-        // Logout do jogador
-        await this.logoutJogador();
+        localStorage.removeItem('sessao_jogador');
+        console.log('🏐 Jogador deslogado');
       }
       
-      // Limpar estado da aplicação
       this.currentUserSubject.next(null);
       
     } catch (error) {
       console.error('❌ Erro no logout:', error);
-      // Forçar limpeza mesmo com erro
+      // Forçar limpeza
       localStorage.removeItem('sessao_jogador');
-      this.sessoesCache.clear();
       this.currentUserSubject.next(null);
     }
   }
 
-  private async logoutJogador(): Promise<void> {
-    try {
-      const sessaoLocal = localStorage.getItem('sessao_jogador');
-      
-      if (sessaoLocal) {
-        const sessao = JSON.parse(sessaoLocal);
-        
-        // Desativar sessão no Firebase
-        if (sessao.telefoneHash) {
-          try {
-            await this.firebase.update('sessoes-jogador', sessao.telefoneHash, {
-              ativo: false,
-              logoutTimestamp: new Date()
-            });
-          } catch (firebaseError) {
-            console.log('⚠️ Erro ao desativar sessão no Firebase:', firebaseError);
-          }
-        }
-        
-        // Remover cache local
-        localStorage.removeItem('sessao_jogador');
-        this.sessoesCache.delete(sessao.telefoneHash);
-      }
-      
-      console.log('🏐 Jogador deslogado');
-    } catch (error) {
-      console.error('❌ Erro ao fazer logout de jogador:', error);
-    }
-  }
-
-  // ========== GERENCIAMENTO DE SESSÕES (ADMIN) ==========
-
-  async obterSessoesAtivas(): Promise<any[]> {
-    try {
-      if (!this.isAdmin()) {
-        return [];
-      }
-
-      console.log('👀 Buscando sessões ativas no Firebase...');
-      
-      const result = await this.firebase.findBy(
-        'sessoes-jogador',
-        'ativo',
-        true
-      );
-
-      if (result.success && result.data) {
-        // Filtrar sessões não expiradas
-        const sessoesValidas = result.data.filter(sessao => {
-          const loginTime = sessao.loginTimestamp?.toDate ? 
-            sessao.loginTimestamp.toDate() : 
-            new Date(sessao.loginTimestamp);
-          
-          const agora = new Date();
-          const diferencaHoras = (agora.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
-          
-          return diferencaHoras <= 24;
-        });
-
-        console.log(`✅ ${sessoesValidas.length} sessão(ões) ativa(s) encontrada(s)`);
-        return sessoesValidas;
-      }
-
-      return [];
-    } catch (error) {
-      console.error('❌ Erro ao buscar sessões ativas:', error);
-      return [];
-    }
-  }
-
-  async desativarSessao(telefoneHash: string): Promise<{ success: boolean; message: string }> {
-    try {
-      if (!this.isAdmin()) {
-        return { success: false, message: 'Apenas administradores podem desativar sessões' };
-      }
-
-      console.log('🚫 Desativando sessão:', telefoneHash);
-      
-      const result = await this.firebase.update('sessoes-jogador', telefoneHash, {
-        ativo: false,
-        desativadoPor: 'admin',
-        dataDesativacao: new Date()
-      });
-
-      if (result.success) {
-        console.log('✅ Sessão desativada com sucesso');
-        return { success: true, message: 'Sessão desativada com sucesso' };
-      } else {
-        return { success: false, message: result.error || 'Erro ao desativar sessão' };
-      }
-    } catch (error) {
-      console.error('❌ Erro ao desativar sessão:', error);
-      return { success: false, message: 'Erro ao desativar sessão' };
-    }
-  }
-
-  async limparSessoesExpiradas(): Promise<{ success: boolean; message: string; removidas: number }> {
-    try {
-      if (!this.isAdmin()) {
-        return { success: false, message: 'Apenas administradores podem limpar sessões', removidas: 0 };
-      }
-
-      console.log('🧹 Limpando sessões expiradas...');
-      
-      const result = await this.firebase.getAll('sessoes-jogador');
-      
-      if (result.success && result.data) {
-        const agora = new Date();
-        const sessoesExpiradas = result.data.filter(sessao => {
-          const loginTime = sessao.loginTimestamp?.toDate ? 
-            sessao.loginTimestamp.toDate() : 
-            new Date(sessao.loginTimestamp);
-          
-          const diferencaHoras = (agora.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
-          return diferencaHoras > 24;
-        });
-
-        // Desativar sessões expiradas
-        const updates = sessoesExpiradas.map(sessao => ({
-          id: sessao.id,
-          data: {
-            ativo: false,
-            expirada: true,
-            dataExpiracao: new Date()
-          }
-        }));
-
-        if (updates.length > 0) {
-          const updateResult = await this.firebase.updateBatch('sessoes-jogador', updates);
-          
-          if (updateResult.success) {
-            console.log(`✅ ${updates.length} sessão(ões) expirada(s) limpa(s)`);
-            return { 
-              success: true, 
-              message: `${updates.length} sessão(ões) expirada(s) removida(s)`,
-              removidas: updates.length 
-            };
-          }
-        } else {
-          return { success: true, message: 'Nenhuma sessão expirada encontrada', removidas: 0 };
-        }
-      }
-
-      return { success: true, message: 'Limpeza concluída', removidas: 0 };
-    } catch (error) {
-      console.error('❌ Erro ao limpar sessões expiradas:', error);
-      return { success: false, message: 'Erro ao limpar sessões expiradas', removidas: 0 };
-    }
-  }
-
   // ========== MÉTODOS DE VERIFICAÇÃO ==========
-
   isAdmin(): boolean {
     const currentUser = this.currentUserSubject.value;
     return currentUser?.tipo === 'admin';
@@ -463,170 +284,26 @@ export class AuthService {
     return this.auth.currentUser;
   }
 
-  // ========== INFORMAÇÕES DO JOGADOR ==========
-
-  getJogadorInfo(): {duplaId: string, dupla: any, telefone: string} | null {
-    const currentUser = this.currentUserSubject.value;
-    
-    if (currentUser?.tipo === 'jogador') {
-      return {
-        duplaId: currentUser.duplaId!,
-        dupla: currentUser.dupla,
-        telefone: currentUser.telefone!
-      };
-    }
-    
-    return null;
-  }
-
-  verificarValidadeSessaoJogador(): boolean {
-    try {
-      const sessaoSalva = localStorage.getItem('sessao_jogador');
-      
-      if (!sessaoSalva) return false;
-      
-      const sessao = JSON.parse(sessaoSalva);
-      const loginTime = new Date(sessao.loginTimestamp);
-      const agora = new Date();
-      const diferencaHoras = (agora.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
-      
-      return diferencaHoras <= 24;
-    } catch {
-      return false;
-    }
-  }
-
-  // ========== CRIAÇÃO DE USUÁRIO ADMIN ==========
-
-  async criarUsuarioAdmin(): Promise<{success: boolean, message: string}> {
-    try {
-      console.log('\n🔥 INSTRUÇÕES PARA CRIAR USUÁRIO ADMINISTRADOR 🔥');
-      console.log('='.repeat(60));
-      console.log('1. Acesse: https://console.firebase.google.com/');
-      console.log('2. Selecione seu projeto Firebase');
-      console.log('3. Vá em "Authentication" > "Users"');
-      console.log('4. Clique em "Add user"');
-      console.log(`5. Email: ${this.ADMIN_EMAIL}`);
-      console.log('6. Password: escolha uma senha segura (mín. 6 caracteres)');
-      console.log('7. Clique em "Add user"');
-      console.log('8. Teste o login na aplicação');
-      console.log('='.repeat(60));
-      
-      return {
-        success: true,
-        message: 'Instruções para criar admin exibidas no console'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: 'Erro ao exibir instruções'
-      };
-    }
-  }
-
-  // ========== UTILITÁRIOS DE SEGURANÇA ==========
-
+  // ========== MÉTODOS AUXILIARES ==========
   private criarHashTelefone(telefone: string): string {
-    // Criar hash seguro do telefone para usar como ID
     const telefoneLimpo = telefone.replace(/\D/g, '');
-    const hash = btoa(telefoneLimpo + '_sessao').replace(/[^a-zA-Z0-9]/g, '');
-    return hash.substring(0, 20); // Limitar tamanho
+    return btoa(telefoneLimpo + '_sessao').replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
   }
 
   private criptografarTelefone(telefone: string): string {
-    // Criptografia simples para o Firebase (apenas ofuscar)
     const telefoneLimpo = telefone.replace(/\D/g, '');
     return btoa(telefoneLimpo).replace(/=/g, '');
   }
 
-  private descriptografarTelefone(telefoneHash: string): string {
-    try {
-      return atob(telefoneHash + '=='.substring(0, telefoneHash.length % 4));
-    } catch {
-      return '';
-    }
-  }
-
   private detectarDispositivo(): string {
     const userAgent = navigator.userAgent;
-    
-    if (/Mobile|Android|iPhone|iPad/.test(userAgent)) {
-      return 'mobile';
-    } else if (/Tablet|iPad/.test(userAgent)) {
-      return 'tablet';
-    } else {
-      return 'desktop';
-    }
+    if (/Mobile|Android|iPhone|iPad/.test(userAgent)) return 'mobile';
+    if (/Tablet|iPad/.test(userAgent)) return 'tablet';
+    return 'desktop';
   }
 
-  // ========== ESTATÍSTICAS DE SESSÕES ==========
-
-  async obterEstatisticasSessoes(): Promise<{
-    totalSessoes: number;
-    sessoesAtivas: number;
-    sessoesHoje: number;
-    dispositivosMaisUsados: { tipo: string; count: number }[];
-  }> {
-    try {
-      if (!this.isAdmin()) {
-        return { totalSessoes: 0, sessoesAtivas: 0, sessoesHoje: 0, dispositivosMaisUsados: [] };
-      }
-
-      const result = await this.firebase.getAll('sessoes-jogador');
-      
-      if (result.success && result.data) {
-        const agora = new Date();
-        const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-        
-        const sessoesAtivas = result.data.filter(sessao => {
-          if (!sessao.ativo) return false;
-          
-          const loginTime = sessao.loginTimestamp?.toDate ? 
-            sessao.loginTimestamp.toDate() : 
-            new Date(sessao.loginTimestamp);
-          
-          const diferencaHoras = (agora.getTime() - loginTime.getTime()) / (1000 * 60 * 60);
-          return diferencaHoras <= 24;
-        });
-
-        const sessoesHoje = result.data.filter(sessao => {
-          const loginTime = sessao.loginTimestamp?.toDate ? 
-            sessao.loginTimestamp.toDate() : 
-            new Date(sessao.loginTimestamp);
-          
-          return loginTime >= inicioHoje;
-        });
-
-        // Contar dispositivos
-        const dispositivos = new Map<string, number>();
-        result.data.forEach(sessao => {
-          const tipo = sessao.dispositivo || 'unknown';
-          dispositivos.set(tipo, (dispositivos.get(tipo) || 0) + 1);
-        });
-
-        const dispositivosMaisUsados = Array.from(dispositivos.entries())
-          .map(([tipo, count]) => ({ tipo, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 5);
-
-        return {
-          totalSessoes: result.data.length,
-          sessoesAtivas: sessoesAtivas.length,
-          sessoesHoje: sessoesHoje.length,
-          dispositivosMaisUsados
-        };
-      }
-
-      return { totalSessoes: 0, sessoesAtivas: 0, sessoesHoje: 0, dispositivosMaisUsados: [] };
-    } catch (error) {
-      console.error('❌ Erro ao obter estatísticas de sessões:', error);
-      return { totalSessoes: 0, sessoesAtivas: 0, sessoesHoje: 0, dispositivosMaisUsados: [] };
-    }
-  }
-
-  // ========== AUDITORIA E LOGS ==========
-
-  async registrarEventoSeguranca(evento: string, detalhes: any = {}): Promise<void> {
+  // ========== REGISTRO DE EVENTOS ==========
+  private async registrarEventoSeguranca(evento: string, detalhes: any = {}): Promise<void> {
     try {
       const currentUser = this.currentUserSubject.value;
       
@@ -640,116 +317,142 @@ export class AuthService {
         detalhes,
         timestamp: new Date(),
         userAgent: navigator.userAgent,
-        ip: 'unknown', // Seria necessário obter do backend
         dispositivo: this.detectarDispositivo()
       };
 
       await this.firebase.create('logs-seguranca', logData);
-      console.log('📝 Evento de segurança registrado:', evento);
     } catch (error) {
-      console.error('❌ Erro ao registrar evento de segurança:', error);
+      console.warn('⚠️ Erro ao registrar evento de segurança:', error);
     }
   }
 
-  async obterLogsSeguranca(limite: number = 50): Promise<any[]> {
+  // ========== DIAGNÓSTICO ==========
+  async getDiagnostics(): Promise<{
+    isInitialized: boolean;
+    isLoggedIn: boolean;
+    userType: string | null;
+    firebaseUser: boolean;
+    firebaseStatus: any;
+  }> {
     try {
-      if (!this.isAdmin()) {
-        return [];
-      }
-
-      const result = await this.firebase.getAll(
-        'logs-seguranca',
-        [
-          orderBy('timestamp', 'desc'),
-          limit(limite)
-        ]
-      );
-
-      return result.success && result.data ? result.data : [];
-    } catch (error) {
-      console.error('❌ Erro ao obter logs de segurança:', error);
-      return [];
-    }
-  }
-
-  // ========== MANUTENÇÃO ==========
-
-  async executarManutencaoSessoes(): Promise<{ success: boolean; message: string; acoes: string[] }> {
-    try {
-      if (!this.isAdmin()) {
-        return { success: false, message: 'Apenas administradores podem executar manutenção', acoes: [] };
-      }
-
-      console.log('🔧 Executando manutenção de sessões...');
-      const acoes: string[] = [];
-
-      // 1. Limpar sessões expiradas
-      const limpeza = await this.limparSessoesExpiradas();
-      if (limpeza.success && limpeza.removidas > 0) {
-        acoes.push(`${limpeza.removidas} sessão(ões) expirada(s) removida(s)`);
-      }
-
-      // 2. Limpar cache local se necessário
-      if (!this.verificarValidadeSessaoJogador()) {
-        localStorage.removeItem('sessao_jogador');
-        acoes.push('Cache local limpo');
-      }
-
-      // 3. Registrar evento de manutenção
-      await this.registrarEventoSeguranca('manutencao_sessoes', { acoes });
-      acoes.push('Evento de manutenção registrado');
-
-      console.log('✅ Manutenção de sessões concluída');
+      const firebaseStatus = await this.firebase.getDiagnostics();
+      const currentUser = this.currentUserSubject.value;
+      
       return {
-        success: true,
-        message: 'Manutenção executada com sucesso',
-        acoes
+        isInitialized: this.isInitialized,
+        isLoggedIn: this.isLoggedIn(),
+        userType: currentUser?.tipo || null,
+        firebaseUser: !!this.auth.currentUser,
+        firebaseStatus
       };
     } catch (error) {
-      console.error('❌ Erro na manutenção de sessões:', error);
+      return {
+        isInitialized: this.isInitialized,
+        isLoggedIn: false,
+        userType: null,
+        firebaseUser: false,
+        firebaseStatus: { error }
+      };
+    }
+  }
+
+  // ========== CRIAÇÃO DE USUÁRIO ADMIN (PRIMEIRA VEZ) ==========
+  async criarUsuarioAdmin(): Promise<{success: boolean, message: string}> {
+    console.log('\n🔥 INSTRUÇÕES PARA CRIAR USUÁRIO ADMINISTRADOR 🔥');
+    console.log('='.repeat(60));
+    console.log('1. Acesse: https://console.firebase.google.com/');
+    console.log('2. Selecione seu projeto Firebase');
+    console.log('3. Vá em "Authentication" > "Users"');
+    console.log('4. Clique em "Add user"');
+    console.log(`5. Email: ${this.ADMIN_EMAIL}`);
+    console.log('6. Password: escolha uma senha segura (mín. 6 caracteres)');
+    console.log('7. Clique em "Add user"');
+    console.log('8. Configure as regras do Firestore (veja o console)');
+    console.log('9. Teste o login na aplicação');
+    console.log('='.repeat(60));
+    
+    return {
+      success: true,
+      message: 'Instruções exibidas no console do navegador'
+    };
+  }
+
+  // ========== TESTES DE CONECTIVIDADE ==========
+  async testarConexaoFirebase(): Promise<{success: boolean, message: string, details?: any}> {
+    try {
+      console.log('🧪 Testando conexão Firebase...');
+      
+      const diagnostics = await this.firebase.getDiagnostics();
+      console.log('📋 Diagnósticos Firebase:', diagnostics);
+      
+      if (!diagnostics.firestoreAvailable) {
+        return {
+          success: false,
+          message: 'Firestore não está disponível',
+          details: diagnostics
+        };
+      }
+
+      // Testar operação simples
+      const connectionOk = await this.firebase.checkConnection();
+      
+      if (connectionOk) {
+        // Testar operação de leitura real
+        try {
+          const testResult = await this.firebase.get('configuracoes', 'global');
+          console.log('📊 Teste de leitura:', testResult);
+          
+          return {
+            success: true,
+            message: 'Conexão Firebase funcionando corretamente',
+            details: { diagnostics, testResult }
+          };
+        } catch (readError) {
+          return {
+            success: false,
+            message: `Problemas nas regras de segurança: ${readError}`,
+            details: { diagnostics, readError }
+          };
+        }
+      } else {
+        return {
+          success: false,
+          message: 'Problemas de conectividade detectados',
+          details: diagnostics
+        };
+      }
+    } catch (error: any) {
+      console.error('❌ Erro no teste de conexão:', error);
       return {
         success: false,
-        message: 'Erro na manutenção de sessões',
-        acoes: []
+        message: `Erro na conexão: ${error.message || 'Erro desconhecido'}`,
+        details: { error: error.code || error.message }
       };
     }
   }
 
-  // ========== MIGRAÇÃO E BACKUP ==========
-
-  async exportarSessoes(): Promise<any[]> {
+  async forcarReconexao(): Promise<{success: boolean, message: string}> {
     try {
-      if (!this.isAdmin()) {
-        return [];
-      }
-
-      const result = await this.firebase.getAll('sessoes-jogador');
-      return result.success && result.data ? result.data : [];
-    } catch (error) {
-      console.error('❌ Erro ao exportar sessões:', error);
-      return [];
-    }
-  }
-
-  async importarSessoes(sessoes: any[]): Promise<{ success: boolean; message: string }> {
-    try {
-      if (!this.isAdmin()) {
-        return { success: false, message: 'Apenas administradores podem importar sessões' };
-      }
-
-      console.log('📥 Importando sessões:', sessoes.length);
-
-      const result = await this.firebase.createBatch('sessoes-jogador', sessoes);
-
-      if (result.success) {
-        console.log('✅ Sessões importadas com sucesso');
-        return { success: true, message: `${sessoes.length} sessão(ões) importada(s) com sucesso` };
+      console.log('🔄 Forçando reconexão...');
+      
+      const success = await this.firebase.reconnect();
+      
+      if (success) {
+        return {
+          success: true,
+          message: 'Reconexão realizada com sucesso'
+        };
       } else {
-        return { success: false, message: result.error || 'Erro ao importar sessões' };
+        return {
+          success: false,
+          message: 'Falha na reconexão'
+        };
       }
-    } catch (error) {
-      console.error('❌ Erro ao importar sessões:', error);
-      return { success: false, message: 'Erro ao importar sessões' };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: `Erro na reconexão: ${error.message || 'Erro desconhecido'}`
+      };
     }
   }
 }
