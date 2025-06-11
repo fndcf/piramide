@@ -1,6 +1,6 @@
 // src/app/components/adicionar-dupla/adicionar-dupla.ts - CORRIGIDO COM VALIDAÇÕES
 
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DuplasService } from '../../services/duplas';
@@ -40,6 +40,8 @@ export class AdicionarDuplaComponent {
     private duplasService: DuplasService,
     private piramidesService: PiramidesService
   ) {}
+
+  private telefoneTimeout: any;
 
   async onSubmit() {
     // ✅ VALIDAÇÕES BÁSICAS MELHORADAS
@@ -129,6 +131,39 @@ export class AdicionarDuplaComponent {
     return true;
   }
 
+  // ✅ NOVO: Verificar telefone único em tempo real
+  async verificarTelefoneUnicoTempoReal() {
+    if (!this.novaDupla.telefone || this.novaDupla.telefone.trim().length < 10) {
+      return; // Não verifica se telefone muito curto
+    }
+
+    try {
+      const verificacao = await this.duplasService.verificarTelefoneUnico(this.novaDupla.telefone);
+      
+      if (!verificacao.unico) {
+        this.validacoesTelefone = {
+          formatoValido: false,
+          motivo: `Telefone já cadastrado para: ${verificacao.dupla!.jogador1}/${verificacao.dupla!.jogador2}`
+        };
+      } else {
+        // Se chegou aqui, telefone é único, verificar formato
+        const formatoOk = this.duplasService.validarFormatoTelefone(this.novaDupla.telefone);
+        this.validacoesTelefone = {
+          formatoValido: formatoOk.valido,
+          motivo: formatoOk.motivo || ''
+        };
+      }
+    } catch (error) {
+      console.error('Erro ao verificar telefone:', error);
+      // Em caso de erro, só valida formato
+      const formatoOk = this.duplasService.validarFormatoTelefone(this.novaDupla.telefone);
+      this.validacoesTelefone = {
+        formatoValido: formatoOk.valido,
+        motivo: formatoOk.motivo || ''
+      };
+    }
+  }
+
   // ✅ NOVA FUNÇÃO: Validar telefone
   private validarTelefone(): boolean {
     const validacao = this.duplasService.validarFormatoTelefone(this.novaDupla.telefone!);
@@ -141,14 +176,24 @@ export class AdicionarDuplaComponent {
     return true;
   }
 
-  // ✅ NOVA FUNÇÃO: Validação em tempo real do telefone
+  // ✅ ATUALIZAR: Método onTelefoneChange para incluir verificação de duplicação
   onTelefoneChange() {
     if (this.novaDupla.telefone && this.novaDupla.telefone.trim()) {
+      // Primeiro valida formato
       const validacao = this.duplasService.validarFormatoTelefone(this.novaDupla.telefone);
       this.validacoesTelefone = {
         formatoValido: validacao.valido,
         motivo: validacao.motivo || ''
       };
+
+      // Se formato está ok, verifica se é único (com debounce)
+      if (validacao.valido) {
+        // Usar debounce para não fazer muitas consultas
+        clearTimeout(this.telefoneCheckTimeout);
+        this.telefoneCheckTimeout = setTimeout(() => {
+          this.verificarTelefoneUnicoTempoReal();
+        }, 800); // Aguarda 800ms após parar de digitar
+      }
     } else {
       this.validacoesTelefone = {
         formatoValido: true,
@@ -157,29 +202,88 @@ export class AdicionarDuplaComponent {
     }
   }
 
-  // ✅ MELHORAR formatação do telefone
+  // ✅ ADICIONAR após o método onTelefoneChange():
+  verificarTelefoneComDebounce() {
+    if (this.telefoneTimeout) {
+      clearTimeout(this.telefoneTimeout);
+    }
+
+    this.onTelefoneChange();
+
+    // ✅ CORREÇÃO: Verificar se telefone existe antes de usar
+    if (this.validacoesTelefone.formatoValido && 
+        this.novaDupla.telefone && 
+        this.novaDupla.telefone.trim().length >= 10) {
+      this.telefoneTimeout = setTimeout(() => {
+        this.verificarTelefoneUnico();
+      }, 800);
+    }
+  }
+  
+  async verificarTelefoneUnico() {
+    // ✅ CORREÇÃO: Verificar se telefone existe antes de usar
+    if (!this.novaDupla.telefone || this.novaDupla.telefone.trim().length < 10) {
+      return;
+    }
+
+    try {
+      const verificacao = await this.duplasService.verificarTelefoneUnico(this.novaDupla.telefone);
+      
+      if (!verificacao.unico && verificacao.dupla) {
+        this.validacoesTelefone = {
+          formatoValido: false,
+          motivo: `Telefone já cadastrado para: ${verificacao.dupla.jogador1}/${verificacao.dupla.jogador2}`
+        };
+      } else {
+        const formatoOk = this.duplasService.validarFormatoTelefone(this.novaDupla.telefone);
+        this.validacoesTelefone = {
+          formatoValido: formatoOk.valido,
+          motivo: formatoOk.motivo || ''
+        };
+      }
+    } catch (error) {
+      console.error('❌ Erro ao verificar telefone único:', error);
+      // ✅ CORREÇÃO: Verificar se telefone existe antes de validar
+      if (this.novaDupla.telefone) {
+        const formatoOk = this.duplasService.validarFormatoTelefone(this.novaDupla.telefone);
+        this.validacoesTelefone = {
+          formatoValido: formatoOk.valido,
+          motivo: formatoOk.motivo || ''
+        };
+      }
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.telefoneTimeout) {
+      clearTimeout(this.telefoneTimeout);
+    }
+  }
+
+  private telefoneCheckTimeout: any;
+
+  // ✅ SUBSTITUIR por esta versão simples
   formatarTelefone(event: any) {
     let valor = event.target.value.replace(/\D/g, '');
     
-    // Limitar a 11 dígitos
     if (valor.length > 11) {
       valor = valor.substring(0, 11);
     }
     
-    // Formatar conforme o tamanho
-    if (valor.length <= 2) {
-      valor = valor.replace(/(\d{0,2})/, '($1');
-    } else if (valor.length <= 7) {
-      valor = valor.replace(/(\d{2})(\d{0,5})/, '($1) $2');
-    } else if (valor.length <= 10) {
-      valor = valor.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
-    } else {
-      valor = valor.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+    // Formatação visual simples
+    if (valor.length >= 10) {
+      if (valor.length === 11) {
+        valor = valor.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+      } else {
+        valor = valor.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+      }
+    } else if (valor.length >= 6) {
+      valor = valor.replace(/(\d{2})(\d+)/, '($1) $2');
+    } else if (valor.length >= 2) {
+      valor = valor.replace(/(\d{2})/, '($1) ');
     }
     
     this.novaDupla.telefone = valor;
-    
-    // ✅ VALIDAR em tempo real
     this.onTelefoneChange();
   }
 

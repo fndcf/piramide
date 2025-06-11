@@ -137,6 +137,12 @@ export class AuthService {
     }
   }
 
+  // ✅ NOVO: Método limparTelefone simplificado (substitui os 2 métodos complexos)
+  private limparTelefone(telefone: string): string {
+    if (!telefone) return '';
+    return telefone.replace(/\D/g, ''); // Remove tudo que não é dígito
+  }
+
   // ========== LOGIN JOGADOR ==========
   async loginJogador(jogadorInfo: {duplaId: string, dupla: any, telefone: string}): Promise<{success: boolean, error?: string}> {
     try {
@@ -175,12 +181,14 @@ export class AuthService {
       localStorage.setItem('sessao_jogador', JSON.stringify(sessaoLocal));
       this.currentUserSubject.next(appUser);
       
-      // Tentar registrar no Firebase (não crítico se falhar)
+      // ✅ SIMPLIFICADO: Registrar no Firebase com telefone limpo
       try {
-        const telefoneHash = this.criarHashTelefone(jogadorInfo.telefone);
-        await this.firebase.set('sessoes-jogador', telefoneHash, {
+        const telefoneLimpo = this.limparTelefone(jogadorInfo.telefone);
+        
+        // Usar o telefone limpo como ID (mais simples que hash)
+        await this.firebase.set('sessoes-jogador', telefoneLimpo, {
           duplaId: jogadorInfo.duplaId,
-          telefone: this.criptografarTelefone(jogadorInfo.telefone),
+          telefone: telefoneLimpo, // Salvar só números
           loginTimestamp: new Date(),
           ultimoAcesso: new Date(),
           ativo: true,
@@ -198,7 +206,7 @@ export class AuthService {
       console.error('❌ Erro no login jogador:', error);
       return { success: false, error: 'Erro ao fazer login. Tente novamente.' };
     }
-  }
+  }  
 
   // ========== VERIFICAÇÕES E VALIDAÇÕES ==========
   private async verificarSessaoJogadorLocal(): Promise<void> {
@@ -282,17 +290,6 @@ export class AuthService {
 
   getCurrentFirebaseUser(): User | null {
     return this.auth.currentUser;
-  }
-
-  // ========== MÉTODOS AUXILIARES ==========
-  private criarHashTelefone(telefone: string): string {
-    const telefoneLimpo = telefone.replace(/\D/g, '');
-    return btoa(telefoneLimpo + '_sessao').replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
-  }
-
-  private criptografarTelefone(telefone: string): string {
-    const telefoneLimpo = telefone.replace(/\D/g, '');
-    return btoa(telefoneLimpo).replace(/=/g, '');
   }
 
   private detectarDispositivo(): string {

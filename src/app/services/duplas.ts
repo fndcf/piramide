@@ -92,13 +92,15 @@ export class DuplasService {
         return { success: false, message: podeAdicionarDuplas.motivo! };
       }
 
-      // Validar telefone único
+      // ✅ VALIDAÇÃO SIMPLIFICADA DE TELEFONE ÚNICO
       if (novaDupla.telefone && novaDupla.telefone.trim()) {
-        const telefoneExistente = await this.verificarTelefoneExistente(novaDupla.telefone.trim());
-        if (telefoneExistente.existe) {
+        const telefoneLimpo = this.limparTelefone(novaDupla.telefone.trim());
+        
+        const verificacao = await this.verificarTelefoneUnico(telefoneLimpo);
+        if (!verificacao.unico) {
           return {
             success: false,
-            message: `Este telefone já está cadastrado para a dupla: ${telefoneExistente.dupla!.jogador1}/${telefoneExistente.dupla!.jogador2}`
+            message: `Este telefone já está cadastrado para: ${verificacao.dupla!.jogador1}/${verificacao.dupla!.jogador2}`
           };
         }
       }
@@ -131,7 +133,7 @@ export class DuplasService {
         piramideId: targetPiramideId,
         jogador1: novaDupla.jogador1.trim(),
         jogador2: novaDupla.jogador2.trim(),
-        telefone: novaDupla.telefone?.trim() || '',
+        telefone: this.limparTelefone(novaDupla.telefone?.trim() || ''),
         base: proximaBase,
         posicao: proximaPosicao,
         vitorias: 0,
@@ -228,12 +230,13 @@ export class DuplasService {
 
   // ========== VALIDAÇÕES COM FIREBASE ==========
 
-  async verificarTelefoneExistente(telefone: string): Promise<{ existe: boolean; dupla?: Dupla }> {
+  // ✅ ADICIONAR este método novo (não substitui nada)
+  async verificarTelefoneUnico(telefone: string): Promise<{ unico: boolean; dupla?: Dupla }> {
     try {
       const telefoneLimpo = this.limparTelefone(telefone);
       
       if (!telefoneLimpo || telefoneLimpo.length < 10) {
-        return { existe: false };
+        return { unico: true };
       }
 
       const result = await this.firebase.findBy(
@@ -245,13 +248,14 @@ export class DuplasService {
 
       if (result.success && result.data && result.data.length > 0) {
         const dupla = this.formatarDupla(result.data[0]);
-        return { existe: true, dupla };
+        return { unico: false, dupla };
       }
 
-      return { existe: false };
+      return { unico: true };
+      
     } catch (error) {
-      console.error('Erro ao verificar telefone:', error);
-      return { existe: false };
+      console.error('❌ Erro ao verificar telefone único:', error);
+      return { unico: true };
     }
   }
 
@@ -492,6 +496,25 @@ export class DuplasService {
       ultimoJogo: data.ultimoJogo?.toDate ? data.ultimoJogo.toDate() : (data.ultimoJogo ? new Date(data.ultimoJogo) : undefined),
       ultimaMovimentacao: data.ultimaMovimentacao?.toDate ? data.ultimaMovimentacao.toDate() : (data.ultimaMovimentacao ? new Date(data.ultimaMovimentacao) : undefined)
     };
+  }
+
+  // ✅ SUBSTITUIR por esta versão simples
+  validarFormatoTelefone(telefone: string): { valido: boolean; motivo?: string } {
+    if (!telefone || telefone.trim() === '') {
+      return { valido: false, motivo: 'Telefone é obrigatório' };
+    }
+    
+    const telefoneLimpo = this.limparTelefone(telefone);
+    
+    if (telefoneLimpo.length < 10) {
+      return { valido: false, motivo: 'Telefone deve ter pelo menos 10 dígitos' };
+    }
+    
+    if (telefoneLimpo.length > 11) {
+      return { valido: false, motivo: 'Telefone deve ter no máximo 11 dígitos' };
+    }
+    
+    return { valido: true };
   }
 
   private limparTelefone(telefone: string): string {
@@ -891,64 +914,6 @@ export class DuplasService {
         duplasRemovidas: 0
       };
     }
-  }
-
-  // ========== VALIDAÇÃO DE FORMATO ==========
-
-  validarFormatoTelefone(telefone: string): { valido: boolean; motivo?: string } {
-    if (!telefone || telefone.trim() === '') {
-      return { valido: false, motivo: 'Telefone é obrigatório' };
-    }
-    
-    const telefoneLimpo = this.limparTelefone(telefone);
-    
-    if (telefoneLimpo.length < 10) {
-      return { valido: false, motivo: 'Telefone deve ter pelo menos 10 dígitos' };
-    }
-    
-    if (telefoneLimpo.length > 11) {
-      return { valido: false, motivo: 'Telefone deve ter no máximo 11 dígitos' };
-    }
-    
-    // Validações específicas para formato brasileiro
-    if (telefoneLimpo.length === 11) {
-      const ddd = telefoneLimpo.substring(0, 2);
-      const terceiroDigito = telefoneLimpo.charAt(2);
-      
-      const dddsValidos = [
-        '11', '12', '13', '14', '15', '16', '17', '18', '19', // SP
-        '21', '22', '24', '27', '28', // RJ/ES
-        '31', '32', '33', '34', '35', '37', '38', // MG
-        '41', '42', '43', '44', '45', '46', // PR
-        '47', '48', '49', // SC
-        '51', '53', '54', '55', // RS
-        '61', '62', '63', '64', '65', '66', '67', '68', '69', // Centro-Oeste
-        '71', '73', '74', '75', '77', '79', // BA/SE
-        '81', '82', '83', '84', '85', '86', '87', '88', '89', // Nordeste
-        '91', '92', '93', '94', '95', '96', '97', '98', '99' // Norte
-      ];
-      
-      if (!dddsValidos.includes(ddd)) {
-        return { valido: false, motivo: 'DDD inválido' };
-      }
-      
-      if (terceiroDigito !== '9') {
-        return { valido: false, motivo: 'Celular deve ter 9 como terceiro dígito' };
-      }
-    } else if (telefoneLimpo.length === 10) {
-      const ddd = telefoneLimpo.substring(0, 2);
-      const terceiroDigito = telefoneLimpo.charAt(2);
-      
-      if (parseInt(ddd) < 11 || parseInt(ddd) > 99) {
-        return { valido: false, motivo: 'DDD inválido' };
-      }
-      
-      if (terceiroDigito === '0' || terceiroDigito === '1') {
-        return { valido: false, motivo: 'Terceiro dígito inválido para telefone fixo' };
-      }
-    }
-    
-    return { valido: true };
   }
 
   // ========== OPERAÇÕES DE BACKUP/IMPORTAÇÃO ==========
