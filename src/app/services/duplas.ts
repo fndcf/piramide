@@ -861,56 +861,110 @@ export class DuplasService {
 
   async excluirTodasDuplasPiramide(piramideId: string): Promise<{ success: boolean; message: string; duplasRemovidas: number }> {
     try {
-      console.log('🗑️ Excluindo todas as duplas da pirâmide no Firebase:', piramideId);
+      console.log('🗑️ Iniciando exclusão de todas as duplas da pirâmide:', piramideId);
 
-      // Buscar todas as duplas da pirâmide
+      // ✅ BUSCAR todas as duplas da pirâmide (ativas e inativas)
       const result = await this.firebase.findBy(
         'duplas',
         'piramideId',
         piramideId
+        // Não filtrar por 'ativa' para pegar todas as duplas desta pirâmide
       );
 
-      if (!result.success || !result.data) {
-        return { success: true, message: 'Nenhuma dupla encontrada para remover', duplasRemovidas: 0 };
+      if (!result.success) {
+        console.log('⚠️ Erro ao buscar duplas ou nenhuma dupla encontrada');
+        return { 
+          success: true, 
+          message: 'Nenhuma dupla encontrada para remover', 
+          duplasRemovidas: 0 
+        };
+      }
+
+      if (!result.data || result.data.length === 0) {
+        console.log('✅ Nenhuma dupla encontrada na pirâmide');
+        return { 
+          success: true, 
+          message: 'Nenhuma dupla encontrada para remover', 
+          duplasRemovidas: 0 
+        };
       }
 
       const duplas = result.data;
-      const quantidadeRemovida = duplas.length;
+      const quantidadeTotal = duplas.length;
+      
+      console.log(`📊 ${quantidadeTotal} dupla(s) encontrada(s) para remoção`);
 
-      // Marcar todas como inativas (soft delete)
+      // ✅ OPÇÃO 1: Soft Delete (marcar como inativas)
+      // Isso é mais seguro para preservar histórico
       const updates = duplas.map(dupla => ({
         id: dupla.id,
         data: {
           ativa: false,
           dataRemocao: new Date(),
-          motivoRemocao: 'Pirâmide excluída'
+          motivoRemocao: 'Pirâmide excluída',
+          piramideAnterior: piramideId // Manter referência para auditoria
         }
       }));
 
       const updateResult = await this.firebase.updateBatch('duplas', updates);
 
       if (updateResult.success) {
-        // Limpar cache
+        // Limpar cache da pirâmide
         this.limparCache(piramideId);
 
-        console.log(`✅ ${quantidadeRemovida} dupla(s) removida(s) do Firebase`);
+        console.log(`✅ ${quantidadeTotal} dupla(s) marcada(s) como removida(s)`);
         return {
           success: true,
-          message: `${quantidadeRemovida} dupla(s) removida(s) da pirâmide excluída`,
-          duplasRemovidas: quantidadeRemovida
+          message: `${quantidadeTotal} dupla(s) removida(s) da pirâmide`,
+          duplasRemovidas: quantidadeTotal
         };
       } else {
-        return {
-          success: false,
-          message: updateResult.error || 'Erro ao remover duplas',
-          duplasRemovidas: 0
-        };
+        console.error('❌ Erro no update em lote:', updateResult.error);
+        
+        // ✅ FALLBACK: Tentar remoção individual
+        console.log('🔄 Tentando remoção individual como fallback...');
+        let removidasComSucesso = 0;
+        
+        for (const dupla of duplas) {
+          try {
+            const individualResult = await this.firebase.update('duplas', dupla.id, {
+              ativa: false,
+              dataRemocao: new Date(),
+              motivoRemocao: 'Pirâmide excluída (fallback)',
+              piramideAnterior: piramideId
+            });
+            
+            if (individualResult.success) {
+              removidasComSucesso++;
+            }
+          } catch (individualError) {
+            console.warn(`⚠️ Erro ao remover dupla individual ${dupla.id}:`, individualError);
+          }
+        }
+        
+        // Limpar cache mesmo com remoção parcial
+        this.limparCache(piramideId);
+        
+        if (removidasComSucesso > 0) {
+          console.log(`✅ ${removidasComSucesso}/${quantidadeTotal} dupla(s) removida(s) individualmente`);
+          return {
+            success: true,
+            message: `${removidasComSucesso}/${quantidadeTotal} dupla(s) removida(s) (algumas falharam)`,
+            duplasRemovidas: removidasComSucesso
+          };
+        } else {
+          return {
+            success: false,
+            message: 'Falha ao remover duplas da pirâmide',
+            duplasRemovidas: 0
+          };
+        }
       }
     } catch (error) {
-      console.error('❌ Erro ao excluir duplas da pirâmide:', error);
+      console.error('❌ Erro crítico ao excluir duplas da pirâmide:', error);
       return {
         success: false,
-        message: 'Erro ao remover duplas da pirâmide',
+        message: 'Erro crítico ao remover duplas da pirâmide',
         duplasRemovidas: 0
       };
     }

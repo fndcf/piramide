@@ -481,6 +481,8 @@ export class PiramidesService {
     try {
       await this.aguardarInicializacao();
       
+      console.log('🗑️ Iniciando exclusão em cascata da pirâmide:', piramideId);
+      
       const getResult = await this.firebase.get('piramides', piramideId);
       
       if (!getResult.success) {
@@ -500,43 +502,121 @@ export class PiramidesService {
         };
       }
 
-      // Verificar se é a última pirâmide
+      // ✅ VERIFICAR se é a última pirâmide ativa do sistema
       const piramidesAtivas = await this.firebase.findBy('piramides', 'status', 'ativa');
+      const piramidesPausadas = await this.firebase.findBy('piramides', 'status', 'pausada');
 
-      if (piramidesAtivas.success && (!piramidesAtivas.data || piramidesAtivas.data.length === 0)) {
-        // Verificar pirâmides pausadas também
-        const piramidesPausadas = await this.firebase.findBy('piramides', 'status', 'pausada');
+      const totalPiramidesAtivas = (piramidesAtivas.success ? piramidesAtivas.data?.length || 0 : 0) +
+                                  (piramidesPausadas.success ? piramidesPausadas.data?.length || 0 : 0);
 
-        if (!piramidesPausadas.success || !piramidesPausadas.data || piramidesPausadas.data.length === 0) {
-          return {
-            success: false,
-            message: 'Não é possível excluir a última pirâmide do sistema'
-          };
-        }
+      if (totalPiramidesAtivas === 0) {
+        return {
+          success: false,
+          message: 'Não é possível excluir a última pirâmide do sistema. Deve haver pelo menos uma pirâmide ativa ou pausada.'
+        };
       }
 
-      // Se for a pirâmide atual, selecionar outra
-      if (this.piramideAtual?.id === piramideId) {
-        if (piramidesAtivas.success && piramidesAtivas.data && piramidesAtivas.data.length > 0) {
-          await this.selecionarPiramide(piramidesAtivas.data[0].id);
+      // ✅ ETAPA 1: Remover/desativar todas as duplas da pirâmide
+      console.log('📂 Etapa 1/4: Removendo duplas da pirâmide...');
+      try {
+        // Importar DuplasService dinamicamente para evitar dependência circular
+        const { DuplasService } = await import('./duplas');
+        const duplasService = new DuplasService(this, this.firebase);
+        
+        const resultadoDuplas = await duplasService.excluirTodasDuplasPiramide(piramideId);
+        
+        if (resultadoDuplas.success) {
+          console.log(`✅ ${resultadoDuplas.duplasRemovidas} dupla(s) removida(s) da pirâmide`);
         } else {
+          console.warn('⚠️ Erro ao remover duplas:', resultadoDuplas.message);
+          // Continua mesmo se houver erro nas duplas
+        }
+      } catch (duplasError) {
+        console.warn('⚠️ Erro ao remover duplas da pirâmide:', duplasError);
+        // Continua mesmo se houver erro
+      }
+
+      // ✅ ETAPA 2: Excluir configuração da pirâmide
+      console.log('⚙️ Etapa 2/4: Removendo configuração da pirâmide...');
+      try {
+        // Importar ConfiguracaoService dinamicamente para evitar dependência circular
+        const { ConfiguracaoService } = await import('./configuracao');
+        const configuracaoService = new ConfiguracaoService(this.firebase, this);
+        
+        const configResult = await configuracaoService.excluirConfiguracaoPiramide(piramideId);
+        
+        if (configResult.success) {
+          console.log('✅ Configuração da pirâmide removida');
+        } else {
+          console.warn('⚠️ Configuração não encontrada ou erro ao remover:', configResult.message);
+          // Continua mesmo se não encontrar configuração
+        }
+      } catch (configError) {
+        console.warn('⚠️ Erro ao remover configuração:', configError);
+        // Continua mesmo se houver erro na configuração
+      }
+
+      // ✅ ETAPA 3: Verificar e alterar pirâmide atual se necessário
+      console.log('🔄 Etapa 3/4: Verificando pirâmide atual...');
+      if (this.piramideAtual?.id === piramideId) {
+        console.log('📍 Pirâmide sendo excluída é a atual, selecionando outra...');
+        
+        // Tentar selecionar uma pirâmide ativa
+        if (piramidesAtivas.success && piramidesAtivas.data && piramidesAtivas.data.length > 0) {
+          const novaPiramide = piramidesAtivas.data.find(p => p.id !== piramideId);
+          if (novaPiramide) {
+            await this.selecionarPiramide(novaPiramide.id);
+            console.log('✅ Nova pirâmide selecionada:', novaPiramide.nome);
+          }
+        } 
+        // Se não há ativas, tentar pausadas
+        else if (piramidesPausadas.success && piramidesPausadas.data && piramidesPausadas.data.length > 0) {
+          const novaPiramide = piramidesPausadas.data.find(p => p.id !== piramideId);
+          if (novaPiramide) {
+            await this.selecionarPiramide(novaPiramide.id);
+            console.log('✅ Nova pirâmide selecionada (pausada):', novaPiramide.nome);
+          }
+        } 
+        // Última opção: limpar pirâmide atual
+        else {
           this.piramideAtual = null;
           this.piramideAtualSubject.next(null);
+          
+          try {
+            await this.firebase.update('configuracoes', 'global', { piramideAtualId: null });
+            console.log('✅ Configuração global limpa');
+          } catch (globalError) {
+            console.warn('⚠️ Erro ao limpar configuração global:', globalError);
+          }
         }
       }
 
-      // Excluir a pirâmide
+      // ✅ ETAPA 4: Excluir a pirâmide
+      console.log('🗑️ Etapa 4/4: Excluindo a pirâmide...');
       const deleteResult = await this.firebase.delete('piramides', piramideId);
 
       if (deleteResult.success) {
-        // ✅ LIMPAR cache
+        // ✅ ETAPA 5: Limpeza final
+        console.log('🧹 Etapa 5/4: Limpeza final...');
+        
+        // Limpar cache
         await this.limparCache();
+        
+        // Remover da configuração global se ainda estiver referenciada
+        try {
+          const configGlobal = await this.firebase.get('configuracoes', 'global');
+          if (configGlobal.success && configGlobal.data?.piramideAtualId === piramideId) {
+            await this.firebase.update('configuracoes', 'global', { piramideAtualId: null });
+          }
+        } catch (cleanupError) {
+          console.warn('⚠️ Erro na limpeza da configuração global:', cleanupError);
+        }
 
-        console.log('✅ Pirâmide excluída e cache limpo');
+        console.log('✅ Pirâmide excluída com sucesso em cascata');
 
         return {
           success: true,
-          message: `Pirâmide "${piramide.nome}" foi excluída permanentemente`
+          message: `Pirâmide "${piramide.nome}" foi excluída permanentemente junto com todas as suas duplas e configurações`
         };
       } else {
         return {
@@ -545,10 +625,10 @@ export class PiramidesService {
         };
       }
     } catch (error: any) {
-      console.error('Erro ao excluir pirâmide:', error);
+      console.error('❌ Erro na exclusão em cascata da pirâmide:', error);
       return {
         success: false,
-        message: 'Erro ao excluir pirâmide'
+        message: 'Erro ao excluir pirâmide. Alguns dados podem não ter sido removidos completamente.'
       };
     }
   }
@@ -760,6 +840,370 @@ export class PiramidesService {
         ultimaAtividade: new Date(),
         tempoMedioBase: 0,
         rotatividade: 0
+      };
+    }
+  }
+
+  // ========== MÉTODO PARA LIMPEZA GERAL DO SISTEMA ==========
+  async limparDadosOrfaos(): Promise<{
+    success: boolean;
+    message: string;
+    detalhes: {
+      configuracoesLimpas: number;
+      duplasLimpas: number;
+      erros: string[];
+    };
+  }> {
+    try {
+      console.log('🧹 Iniciando limpeza geral de dados órfãos...');
+      
+      const erros: string[] = [];
+      let configuracoesLimpas = 0;
+      let duplasLimpas = 0;
+
+      // ✅ ETAPA 1: Buscar todas as pirâmides válidas
+      const piramidesResult = await this.firebase.getAll('piramides');
+      const piramidesValidas = new Set(
+        piramidesResult.success && piramidesResult.data 
+          ? piramidesResult.data.map(p => p.id)
+          : []
+      );
+
+      console.log(`📊 ${piramidesValidas.size} pirâmide(s) válida(s) encontrada(s)`);
+
+      // ✅ ETAPA 2: Limpar configurações órfãs
+      try {
+        const { ConfiguracaoService } = await import('./configuracao');
+        const configuracaoService = new ConfiguracaoService(this.firebase, this);
+        
+        const limpezaConfig = await configuracaoService.limparConfiguracaoOrfas();
+        
+        if (limpezaConfig.success) {
+          configuracoesLimpas = limpezaConfig.limpas;
+          console.log(`✅ ${configuracoesLimpas} configuração(ões) órfã(s) limpa(s)`);
+        } else {
+          erros.push(`Erro na limpeza de configurações: ${limpezaConfig.message}`);
+        }
+      } catch (configError) {
+        erros.push(`Erro ao limpar configurações órfãs: ${configError}`);
+        console.error('❌ Erro ao limpar configurações órfãs:', configError);
+      }
+
+      // ✅ ETAPA 3: Limpar duplas órfãs
+      try {
+        const { DuplasService } = await import('./duplas');
+        const duplasService = new DuplasService(this, this.firebase);
+        
+        // Buscar todas as duplas
+        const duplasResult = await this.firebase.getAll('duplas');
+        
+        if (duplasResult.success && duplasResult.data) {
+          // Encontrar duplas de pirâmides que não existem mais
+          const duplasOrfas = duplasResult.data.filter(dupla => 
+            dupla.piramideId && !piramidesValidas.has(dupla.piramideId)
+          );
+          
+          console.log(`📊 ${duplasOrfas.length} dupla(s) órfã(s) encontrada(s)`);
+          
+          if (duplasOrfas.length > 0) {
+            // Agrupar por pirâmide para limpeza eficiente
+            const duplasPorPiramide = new Map<string, any[]>();
+            
+            duplasOrfas.forEach(dupla => {
+              if (!duplasPorPiramide.has(dupla.piramideId)) {
+                duplasPorPiramide.set(dupla.piramideId, []);
+              }
+              duplasPorPiramide.get(dupla.piramideId)!.push(dupla);
+            });
+            
+            // Limpar duplas por pirâmide órfã
+            for (const [piramideOrfaId, duplas] of duplasPorPiramide) {
+              try {
+                const resultado = await duplasService.excluirTodasDuplasPiramide(piramideOrfaId);
+                if (resultado.success) {
+                  duplasLimpas += resultado.duplasRemovidas;
+                  console.log(`✅ ${resultado.duplasRemovidas} dupla(s) da pirâmide órfã ${piramideOrfaId} limpa(s)`);
+                } else {
+                  erros.push(`Erro ao limpar duplas da pirâmide órfã ${piramideOrfaId}: ${resultado.message}`);
+                }
+              } catch (duplaError) {
+                erros.push(`Erro ao processar duplas da pirâmide órfã ${piramideOrfaId}: ${duplaError}`);
+              }
+            }
+          }
+        }
+      } catch (duplaError) {
+        erros.push(`Erro ao limpar duplas órfãs: ${duplaError}`);
+        console.error('❌ Erro ao limpar duplas órfãs:', duplaError);
+      }
+
+      // ✅ ETAPA 4: Limpar referências na configuração global
+      try {
+        const configGlobal = await this.firebase.get('configuracoes', 'global');
+        
+        if (configGlobal.success && configGlobal.data?.piramideAtualId) {
+          const piramideAtualId = configGlobal.data.piramideAtualId;
+          
+          // Verificar se a pirâmide atual ainda existe
+          if (!piramidesValidas.has(piramideAtualId)) {
+            console.log('🔄 Pirâmide atual não existe mais, limpando referência...');
+            
+            // Tentar selecionar uma pirâmide válida
+            if (piramidesValidas.size > 0) {
+              const primeiraPiramideValida = Array.from(piramidesValidas)[0];
+              await this.selecionarPiramide(primeiraPiramideValida);
+              console.log('✅ Nova pirâmide atual selecionada automaticamente');
+            } else {
+              // Não há pirâmides válidas, limpar configuração
+              await this.firebase.update('configuracoes', 'global', { piramideAtualId: null });
+              this.piramideAtual = null;
+              this.piramideAtualSubject.next(null);
+              console.log('✅ Configuração global limpa (nenhuma pirâmide válida)');
+            }
+          }
+        }
+      } catch (globalError) {
+        erros.push(`Erro ao limpar configuração global: ${globalError}`);
+        console.error('❌ Erro ao limpar configuração global:', globalError);
+      }
+
+      // ✅ ETAPA 5: Limpar cache
+      await this.limparCache();
+
+      // ✅ RESUMO FINAL
+      const temErros = erros.length > 0;
+      const totalLimpezas = configuracoesLimpas + duplasLimpas;
+      
+      let mensagem = '';
+      if (totalLimpezas === 0 && !temErros) {
+        mensagem = 'Sistema limpo! Nenhum dado órfão encontrado.';
+      } else if (totalLimpezas > 0 && !temErros) {
+        mensagem = `Limpeza concluída com sucesso! ${configuracoesLimpas} configuração(ões) e ${duplasLimpas} dupla(s) órfã(s) removida(s).`;
+      } else if (totalLimpezas > 0 && temErros) {
+        mensagem = `Limpeza parcialmente concluída. ${configuracoesLimpas} configuração(ões) e ${duplasLimpas} dupla(s) órfã(s) removida(s), mas ${erros.length} erro(s) encontrado(s).`;
+      } else {
+        mensagem = `Limpeza falhou. ${erros.length} erro(s) encontrado(s).`;
+      }
+
+      console.log('📋 Resultado da limpeza:', {
+        configuracoesLimpas,
+        duplasLimpas,
+        erros: erros.length,
+        mensagem
+      });
+
+      return {
+        success: totalLimpezas > 0 || !temErros,
+        message: mensagem,
+        detalhes: {
+          configuracoesLimpas,
+          duplasLimpas,
+          erros
+        }
+      };
+    } catch (error) {
+      console.error('❌ Erro crítico na limpeza geral:', error);
+      return {
+        success: false,
+        message: 'Erro crítico na limpeza geral do sistema',
+        detalhes: {
+          configuracoesLimpas: 0,
+          duplasLimpas: 0,
+          erros: [`Erro crítico: ${error}`]
+        }
+      };
+    }
+  }
+
+  // ========== MÉTODO PARA VALIDAÇÃO DE INTEGRIDADE ==========
+  async validarIntegridadeSistema(): Promise<{
+    success: boolean;
+    problemas: string[];
+    sugestoes: string[];
+    estatisticas: {
+      totalPiramides: number;
+      totalDuplas: number;
+      totalConfiguracoes: number;
+      duplasOrfas: number;
+      configuracoesOrfas: number;
+    };
+  }> {
+    try {
+      console.log('🔍 Iniciando validação de integridade do sistema...');
+      
+      const problemas: string[] = [];
+      const sugestoes: string[] = [];
+
+      // ✅ ESTATÍSTICAS BÁSICAS
+      const piramidesResult = await this.firebase.getAll('piramides');
+      const duplasResult = await this.firebase.getAll('duplas');
+      const configuracoesResult = await this.firebase.getAll('configuracoes-piramide');
+
+      const totalPiramides = piramidesResult.success ? (piramidesResult.data?.length || 0) : 0;
+      const totalDuplas = duplasResult.success ? (duplasResult.data?.length || 0) : 0;
+      const totalConfiguracoes = configuracoesResult.success ? (configuracoesResult.data?.length || 0) : 0;
+
+      const piramidesValidas = new Set(
+        piramidesResult.success && piramidesResult.data 
+          ? piramidesResult.data.map(p => p.id)
+          : []
+      );
+
+      // ✅ VERIFICAR DUPLAS ÓRFÃS
+      let duplasOrfas = 0;
+      if (duplasResult.success && duplasResult.data) {
+        duplasOrfas = duplasResult.data.filter(dupla => 
+          dupla.piramideId && !piramidesValidas.has(dupla.piramideId)
+        ).length;
+        
+        if (duplasOrfas > 0) {
+          problemas.push(`${duplasOrfas} dupla(s) órfã(s) encontrada(s) (referenciando pirâmides inexistentes)`);
+          sugestoes.push('Execute a limpeza automática para remover duplas órfãs');
+        }
+      }
+
+      // ✅ VERIFICAR CONFIGURAÇÕES ÓRFÃS
+      let configuracoesOrfas = 0;
+      if (configuracoesResult.success && configuracoesResult.data) {
+        configuracoesOrfas = configuracoesResult.data.filter(config => 
+          !piramidesValidas.has(config.id)
+        ).length;
+        
+        if (configuracoesOrfas > 0) {
+          problemas.push(`${configuracoesOrfas} configuração(ões) órfã(s) encontrada(s)`);
+          sugestoes.push('Execute a limpeza automática para remover configurações órfãs');
+        }
+      }
+
+      // ✅ VERIFICAR PIRÂMIDE ATUAL
+      try {
+        const configGlobal = await this.firebase.get('configuracoes', 'global');
+        
+        if (configGlobal.success && configGlobal.data?.piramideAtualId) {
+          const piramideAtualId = configGlobal.data.piramideAtualId;
+          
+          if (!piramidesValidas.has(piramideAtualId)) {
+            problemas.push('Pirâmide atual configurada não existe mais');
+            sugestoes.push('Selecione uma pirâmide válida ou execute a limpeza automática');
+          }
+        } else if (totalPiramides > 0) {
+          problemas.push('Nenhuma pirâmide atual configurada, mas existem pirâmides no sistema');
+          sugestoes.push('Selecione uma pirâmide como atual');
+        }
+      } catch (globalError) {
+        problemas.push('Erro ao verificar configuração global');
+      }
+
+      // ✅ VERIFICAR PIRÂMIDES SEM CONFIGURAÇÃO
+      if (piramidesResult.success && piramidesResult.data && configuracoesResult.success) {
+        const configuracoesExistentes = new Set(
+          configuracoesResult.data?.map(c => c.id) || []
+        );
+        
+        const piramidesSemConfig = piramidesResult.data.filter(p => 
+          !configuracoesExistentes.has(p.id)
+        );
+        
+        if (piramidesSemConfig.length > 0) {
+          problemas.push(`${piramidesSemConfig.length} pirâmide(s) sem configuração`);
+          sugestoes.push('As configurações serão criadas automaticamente quando necessário');
+        }
+      }
+
+      // ✅ VERIFICAR CONSISTÊNCIA DE DADOS
+      if (totalPiramides === 0 && (totalDuplas > 0 || totalConfiguracoes > 0)) {
+        problemas.push('Sistema inconsistente: duplas ou configurações existem sem pirâmides');
+        sugestoes.push('Execute a limpeza automática ou crie pelo menos uma pirâmide');
+      }
+
+      const estatisticas = {
+        totalPiramides,
+        totalDuplas,
+        totalConfiguracoes,
+        duplasOrfas,
+        configuracoesOrfas
+      };
+
+      console.log('📊 Validação concluída:', {
+        problemas: problemas.length,
+        sugestoes: sugestoes.length,
+        estatisticas
+      });
+
+      return {
+        success: problemas.length === 0,
+        problemas,
+        sugestoes,
+        estatisticas
+      };
+    } catch (error) {
+      console.error('❌ Erro na validação de integridade:', error);
+      return {
+        success: false,
+        problemas: [`Erro na validação: ${error}`],
+        sugestoes: ['Tente novamente ou contate o suporte'],
+        estatisticas: {
+          totalPiramides: 0,
+          totalDuplas: 0,
+          totalConfiguracoes: 0,
+          duplasOrfas: 0,
+          configuracoesOrfas: 0
+        }
+      };
+    }
+  }
+
+  // ========== MÉTODO PARA RELATÓRIO DE SISTEMA ==========
+  async gerarRelatorioSistema(): Promise<{
+    timestamp: Date;
+    integridade: any;
+    diagnosticos: any;
+    recomendacoes: string[];
+  }> {
+    try {
+      console.log('📋 Gerando relatório completo do sistema...');
+      
+      // Executar validação de integridade
+      const integridade = await this.validarIntegridadeSistema();
+      
+      // Obter diagnósticos do Firebase
+      const diagnosticos = await this.getDiagnostics();
+      
+      // Gerar recomendações baseadas nos problemas encontrados
+      const recomendacoes: string[] = [];
+      
+      if (integridade.problemas.length > 0) {
+        recomendacoes.push('🧹 Execute a limpeza automática para resolver problemas de dados órfãos');
+      }
+      
+      if (integridade.estatisticas.totalPiramides === 0) {
+        recomendacoes.push('🏗️ Crie pelo menos uma pirâmide para começar a usar o sistema');
+      }
+      
+      if (!diagnosticos.firebaseStatus.isOnline) {
+        recomendacoes.push('🔌 Verifique a conexão com o Firebase');
+      }
+      
+      if (recomendacoes.length === 0) {
+        recomendacoes.push('✅ Sistema funcionando corretamente');
+      }
+
+      const relatorio = {
+        timestamp: new Date(),
+        integridade,
+        diagnosticos,
+        recomendacoes
+      };
+
+      console.log('✅ Relatório gerado com sucesso');
+      return relatorio;
+    } catch (error) {
+      console.error('❌ Erro ao gerar relatório:', error);
+      return {
+        timestamp: new Date(),
+        integridade: { success: false, problemas: [`Erro: ${error}`], sugestoes: [], estatisticas: {} },
+        diagnosticos: { error },
+        recomendacoes: ['❌ Erro ao gerar relatório - tente novamente']
       };
     }
   }

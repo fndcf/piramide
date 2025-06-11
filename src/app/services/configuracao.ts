@@ -457,33 +457,195 @@ export class ConfiguracaoService {
     }
   }
 
+  // ========== MÉTODO MELHORADO PARA EXCLUSÃO ==========
   async excluirConfiguracaoPiramide(piramideId: string): Promise<{ success: boolean; message: string }> {
     try {
       console.log('🗑️ Excluindo configuração da pirâmide:', piramideId);
       
+      // ✅ VERIFICAR se a configuração existe antes de tentar excluir
+      const configExiste = await this.firebase.get('configuracoes-piramide', piramideId);
+      
+      if (!configExiste.success) {
+        console.log('⚠️ Configuração não encontrada, possivelmente já foi excluída');
+        return {
+          success: true,
+          message: 'Configuração não encontrada (possivelmente já excluída)'
+        };
+      }
+
+      // ✅ EXCLUIR a configuração
       const result = await this.firebase.delete('configuracoes-piramide', piramideId);
       
       if (result.success) {
-        // Limpar cache
+        // Limpar cache local
         this.limparCache(piramideId);
         
-        console.log('✅ Configuração excluída do Firebase');
+        console.log('✅ Configuração da pirâmide excluída com sucesso');
         return {
           success: true,
           message: 'Configuração da pirâmide excluída com sucesso'
         };
       } else {
+        console.error('❌ Erro ao excluir configuração:', result.error);
         return {
           success: false,
           message: result.error || 'Erro ao excluir configuração'
         };
       }
     } catch (error) {
-      console.error('❌ Erro ao excluir configuração:', error);
+      console.error('❌ Erro crítico ao excluir configuração da pirâmide:', error);
       return {
         success: false,
-        message: 'Erro ao excluir configuração da pirâmide'
+        message: 'Erro crítico ao excluir configuração da pirâmide'
       };
     }
   }
+
+  // ========== MÉTODO PARA LIMPEZA EM LOTE ==========
+  async limparConfiguracoesPiramides(piramideIds: string[]): Promise<{ 
+    success: boolean; 
+    message: string; 
+    configuracoesFalhas: string[] 
+  }> {
+    try {
+      console.log('🧹 Limpando configurações de múltiplas pirâmides:', piramideIds.length);
+      
+      const falhas: string[] = [];
+      let sucessos = 0;
+      
+      for (const piramideId of piramideIds) {
+        try {
+          const resultado = await this.excluirConfiguracaoPiramide(piramideId);
+          if (resultado.success) {
+            sucessos++;
+            console.log(`✅ Configuração ${piramideId} excluída`);
+          } else {
+            falhas.push(piramideId);
+            console.warn(`⚠️ Falha ao excluir configuração ${piramideId}:`, resultado.message);
+          }
+        } catch (error) {
+          falhas.push(piramideId);
+          console.warn(`⚠️ Erro ao excluir configuração ${piramideId}:`, error);
+        }
+      }
+      
+      const totalProcessadas = sucessos + falhas.length;
+      
+      console.log(`📊 Resultado: ${sucessos}/${totalProcessadas} configurações excluídas`);
+      
+      return {
+        success: sucessos > 0,
+        message: falhas.length === 0 
+          ? `${sucessos} configuração(ões) excluída(s) com sucesso`
+          : `${sucessos}/${totalProcessadas} configuração(ões) excluída(s). ${falhas.length} falharam.`,
+        configuracoesFalhas: falhas
+      };
+    } catch (error) {
+      console.error('❌ Erro na limpeza em lote de configurações:', error);
+      return {
+        success: false,
+        message: 'Erro na limpeza em lote de configurações',
+        configuracoesFalhas: piramideIds
+      };
+    }
+  }
+
+  // ========== MÉTODO PARA VERIFICAR ÓRFÃOS ==========
+  async verificarConfiguracaoOrf(): Promise<{ 
+    success: boolean; 
+    configuracoesOrfas: string[]; 
+    message: string 
+  }> {
+    try {
+      console.log('🔍 Verificando configurações órfãs...');
+      
+      // ✅ BUSCAR todas as configurações
+      const configResult = await this.firebase.getAll('configuracoes-piramide');
+      
+      if (!configResult.success || !configResult.data) {
+        return {
+          success: true,
+          configuracoesOrfas: [],
+          message: 'Nenhuma configuração encontrada'
+        };
+      }
+      
+      // ✅ BUSCAR todas as pirâmides existentes
+      const piramidesResult = await this.firebase.getAll('piramides');
+      const piramidesExistentes = new Set(
+        piramidesResult.success && piramidesResult.data 
+          ? piramidesResult.data.map(p => p.id)
+          : []
+      );
+      
+      // ✅ ENCONTRAR configurações sem pirâmide correspondente
+      const configuracoesOrfas = configResult.data
+        .filter(config => !piramidesExistentes.has(config.id))
+        .map(config => config.id);
+      
+      console.log(`📊 ${configuracoesOrfas.length} configuração(ões) órfã(s) encontrada(s)`);
+      
+      return {
+        success: true,
+        configuracoesOrfas,
+        message: configuracoesOrfas.length === 0 
+          ? 'Nenhuma configuração órfã encontrada'
+          : `${configuracoesOrfas.length} configuração(ões) órfã(s) encontrada(s)`
+      };
+    } catch (error) {
+      console.error('❌ Erro ao verificar configurações órfãs:', error);
+      return {
+        success: false,
+        configuracoesOrfas: [],
+        message: 'Erro ao verificar configurações órfãs'
+      };
+    }
+  }
+
+  // ========== MÉTODO PARA LIMPEZA AUTOMÁTICA ==========
+  async limparConfiguracaoOrfas(): Promise<{ success: boolean; message: string; limpas: number }> {
+    try {
+      console.log('🧹 Iniciando limpeza automática de configurações órfãs...');
+      
+      // ✅ VERIFICAR configurações órfãs
+      const verificacao = await this.verificarConfiguracaoOrf();
+      
+      if (!verificacao.success) {
+        return {
+          success: false,
+          message: verificacao.message,
+          limpas: 0
+        };
+      }
+      
+      if (verificacao.configuracoesOrfas.length === 0) {
+        return {
+          success: true,
+          message: 'Nenhuma configuração órfã encontrada para limpar',
+          limpas: 0
+        };
+      }
+      
+      // ✅ LIMPAR configurações órfãs
+      const limpeza = await this.limparConfiguracoesPiramides(verificacao.configuracoesOrfas);
+      
+      const limpas = verificacao.configuracoesOrfas.length - limpeza.configuracoesFalhas.length;
+      
+      console.log(`✅ Limpeza concluída: ${limpas} configuração(ões) órfã(s) removida(s)`);
+      
+      return {
+        success: limpeza.success,
+        message: `${limpas} configuração(ões) órfã(s) removida(s)`,
+        limpas
+      };
+    } catch (error) {
+      console.error('❌ Erro na limpeza automática:', error);
+      return {
+        success: false,
+        message: 'Erro na limpeza automática de configurações órfãs',
+        limpas: 0
+      };
+    }
+  }
+
 }
